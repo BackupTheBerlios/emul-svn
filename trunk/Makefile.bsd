@@ -16,7 +16,7 @@ INCLUDEDIR=$(PREFIX)/include
 MANDIR=$(PREFIX)/man
 
 CFLAGS=-Wall -Werror -pedantic
-EMULVER=1.0.2
+EMULVER=1.0.3
 
 all: emul.so emul.la sirfmon emul_test emul_test2 emul_replug
 
