@@ -1,0 +1,60 @@
+EarthMate Userland Library v1.0.2
+emul's dependencies are as follows:
+
+libpthread
+libusb >= 0.1.8
+
+	The library has moved away from automake and friends.  For your target
+install, please link the appropriate makefile.  For example, someone doing
+and install with Mac OS X or OpenDarwin should issue the command:
+	$ln -s Makefile.darwin Makefile
+
+	To install, please take a look at the Makefile and make sure the
+PREFIX variable is set to your liking.  The default is '/usr'.  If this
+is acceptable, it should be simple enough to enter the command below
+and hit enter:
+
+$ make install
+
+	To see if things are working, there are three programs which
+utilize this library.  Those are: emul_test, emul_test2, and sirfmon.
+If all goes well, simply replugging the earthmate device and running
+emul_test should start spewing NMEA on the terminal.  There is also
+the excellent utility 'sirfmon' written mostly by Eric S. Raymond
+which can be run with this library via the command:
+$ sirfmon emate     (it also works with regular tty devices)
+
+	Both sirfmon and emul_test are installed by default.  emul_test can be passed
+the argument d0 - d8 to activate emul library debugging.
+
+	For information regarding the gpsd patch in directory patches,
+please view the readme file in that directory.
+
+	Documentation for the library can be found in html/ courtesy of doxygen.
+man keywords are 'emul.h' and 'serconfig'.
+
+
+	If you want to help out, with porting/patches/bug reports/success
+stories/etc, please do.  Visit the project page at:
+http://developer.berlios.de/projects/emul/
+
+My tests and trials (amd athlon 1500/256MB ddr266/ehci-ohci-uhci):
+
+Gentoo Linux 2004.3 (gcc 3.4.3 / kernel 2.6.11):
+	Compiled without trouble.  It just works, but then again I'm developing emul on this platform.
+
+Slackware 10.1 (gcc 3.3.4 / kernel 2.4.29):
+	Compiled without trouble.  The sirfmon utility works fairly well at rates below or at 9600bps.  Anything higher will start
+choking the emul applications, including gpsd.
+
+OpenDarwin 7.2.1 (gcc 3.3):
+	Compiled without trouble.  The only usb controller which seemed to work was an Ali based ehci/ohci controller, and even then only one of the two ports worked.  I'm sure someone with ppc hardware could easily have this working.  When running the test applications, usb_interrupt_read seemed to fail every time.  Someone running Mac OS X 10.3.8 will most likely have this running smoothly.
+
+Mac OS X:
+	I'm guessing this library will work based on what happened with OpenDarwin.  Someone please send a report.
+
+NetBSD 2.0 (gcc 3.3.3):
+	Compiled without trouble.  In order to avoid using userconf manually on every boot to disable uhid/uhidev, the uhid interface needs to be disabled in the kernel by recompiling it.  This is of course very inconvenient for someone with usb mice, etc.  With userconf, at boot I had to issue the command 'boot -c' in order to get into the userconf dialog.  Then, to disable the hid interface, issue the commands: disable 349 and disable 350.  The emul_test program works fine, however the lines never drop... that is something that should be fixed.  The em_select() function seems to be at blame for why sirfmon and emul_test2 fail to work properly.  Needless to say, emul is borked for now with bsd in general
+
+FreeBSD:
+	Avoid this library... use the ucycom module instead.  The node created by ucycom should be used with gpsd.

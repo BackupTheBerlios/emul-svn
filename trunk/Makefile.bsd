@@ -1,0 +1,90 @@
+# Customized Makefile
+#
+# Change PREFIX to desired prefix path.
+# OpenDarwin users please add "-framework IOKit" to LDFLAGS
+# ie: export LDFLAGS="-framework IOKit"
+# before running make.
+
+.PHONY: all install clean
+
+
+CC=gcc
+PREFIX=/usr
+LIBDIR=$(PREFIX)/lib
+BINDIR=$(PREFIX)/bin
+INCLUDEDIR=$(PREFIX)/include
+MANDIR=$(PREFIX)/man
+
+CFLAGS=-Wall -Werror -pedantic
+EMULVER=1.0.2
+
+all: emul.so emul.la sirfmon emul_test emul_test2
+
+emul.so:
+	@echo "   Compiling shared library..."
+	@$(CC) $(CFLAGS) -D_REENTRANT -fPIC -c src/emul.c -o emul_shr.o
+	@$(CC) $(CFLAGS) -D_REENTRANT -fPIC -c src/buf.c -o buf_shr.o
+	@$(CC) $(LDFLAGS) -shared -fPIC -Wl,-soname,libemul.so.1 \
+	-o libemul.so.$(EMULVER) emul_shr.o buf_shr.o -lusb -pthread
+
+emul.la:
+	@echo "   Compiling static library..."
+	@$(CC) $(CFLAGS) -c src/emul.c -o emul_sic.o
+	@$(CC) $(CFLAGS) -c src/buf.c -o buf_sic.o
+	@ar rc libemul.a emul_sic.o buf_sic.o
+	@ranlib libemul.a
+
+sirfmon: emul.so
+	@echo "   Compiling sirfmon..."
+	@# make sure symlink is in place
+	@ln -sf libemul.so.$(EMULVER) libemul.so
+	@$(CC) -I./src -c src/sirfmon.c -o sirfmon.o
+	@$(CC) -L. -lemul -lcurses -lm sirfmon.o -o sirfmon
+
+emul_test: emul.so
+	@echo "   Compiling emul_test..."
+	@# make sure symlink is in place
+	@ln -sf libemul.so.$(EMULVER) libemul.so
+	@$(CC) -I./src -c src/emul_test.c -o emul_test.o
+	@$(CC) -L. -lemul emul_test.o -o emul_test
+
+emul_test2: emul.so
+	@echo "   Compiling emul_test2..."
+	@# make sure symlink is in place
+	@ln -sf libemul.so.$(EMULVER) libemul.so
+	@$(CC) -I./src -c src/emul_test2.c -o emul_test2.o
+	@$(CC) -L. -lemul emul_test2.o -o emul_test2
+
+install: all
+	@echo "   Installing emul.h into $(INCLUDEDIR)"
+	@cp src/emul.h $(INCLUDEDIR)/
+	@if test -e libemul.so.$(EMULVER); then \
+		echo "   Installing shared library into $(LIBDIR)/ - (libemul.so.$(EMULVER))"; \
+		cp libemul.so.$(EMULVER) $(LIBDIR)/; \
+		ln -sf $(LIBDIR)/libemul.so.$(EMULVER) $(LIBDIR)/libemul.so.1; \
+		ln -sf $(LIBDIR)/libemul.so.1 $(LIBDIR)/libemul.so; fi
+	@if test -e libemul.a; then \
+		echo "   Installing static library into $(LIBDIR)/ - (libemul.a)"; \
+		cp libemul.a $(LIBDIR)/; fi
+	@echo "   emul library v$(EMULVER) installed successfully in $(LIBDIR)."
+	@cp -v sirfmon emul_test $(BINDIR)/
+	@echo "   emul programs installed successfully in $(BINDIR)."
+	@if test ! -e $(MANDIR)/man3; then \
+		mkdir -p $(MANDIR)/man3; fi
+	@cp -v man/man3/serconfig.3 $(MANDIR)/man3/
+	@cp -v man/man3/emul.h.3 $(MANDIR)/man3/
+	@echo "   emul man pages installed successfully in $(MANDIR)/man3/."
+
+uninstall:
+	@echo -n "   Performing uninstall..."
+	@rm -f $(LIBDIR)/libemul.a $(LIBDIR)/libemul.so $(LIBDIR)/libemul.so.1 \
+	$(LIBDIR)/libemul.so.$(EMULVER) $(INCLUDEDIR)/emul.h
+	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon
+	@rm -f $(MANDIR)/man3/emul.h.3; rm -f $(MANDIR)/man3/serconfig.3
+	@echo " done."
+
+clean:
+	@echo -n "   Cleaning up..."
+	@rm -f *.o libemul.a libemul.so libemul.so.1 libemul.so.$(EMULVER) \
+	sirfmon emul_test emul_test2
+	@echo " done."

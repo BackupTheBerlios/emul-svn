@@ -1,0 +1,56 @@
+.TH "serconfig" 3 "22 Mar 2005" "Version 1.0.1" "EarthMate Userland Library" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+serconfig \- Structure used with em_serconfig_set and em_serconfig_get.  
+
+.PP
+.SH SYNOPSIS
+.br
+.PP
+\fC#include <emul.h>\fP
+.PP
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "long \fBbaudrate\fP"
+.br
+.RI "\fIParameter for baud rate. \fP"
+.ti -1c
+.RI "short \fBdatabits\fP"
+.br
+.RI "\fIParameter for data bits. \fP"
+.ti -1c
+.RI "short \fBstopbits\fP"
+.br
+.RI "\fIParameter for stop bits. \fP"
+.ti -1c
+.RI "short \fBparity\fP"
+.br
+.RI "\fIParameter for parity type. \fP"
+.in -1c
+.SH "Detailed Description"
+.PP 
+Structure used with em_serconfig_set and em_serconfig_get. 
+
+This object is used for setting and retrieving the serial configuration. 
+.PP
+.SH "Field Documentation"
+.PP 
+.SS "long \fBserconfig::baudrate\fP"
+.PP
+Parameter for baud rate. Valid rates are 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, and 115200. 
+.SS "short \fBserconfig::databits\fP"
+.PP
+Parameter for data bits. Valid range is 5 - 8. 
+.SS "short \fBserconfig::parity\fP"
+.PP
+Parameter for parity type. Valid values are \fIPAR_NONE\fP, \fIPAR_EVEN\fP, or \fIPAR_ODD\fP. 
+.SS "short \fBserconfig::stopbits\fP"
+.PP
+Parameter for stop bits. Valid values are 1 or 2. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for EarthMate Userland Library from the source code.

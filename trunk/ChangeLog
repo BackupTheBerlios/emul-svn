@@ -1,0 +1,15 @@
+emul v 1.0.2 (3/29/05)
+	-linux: fixed detachment of hid driver from the earthmate
+	 device... should now work properly with kernels less than
+	 2.6.10 and the 2.4 kernels as well.
+	-added new argument to emul_test application so it can be
+	 used for debugging library.  the argument is d0 - d8.
+	-replaced the makefile tools with a standard Makefile set.
+	-added include for stdarg to sirfmon for NetBSD.
+	-replaced wgetstr with wgetnstr to quiet security warning
+	 on NetBSD.
+	-tested library on OpenDarwin, NetBSD, and Slackware.
+	 See README for details.
+
+emul v 1.0.1 (3/22/05)
+	-first released

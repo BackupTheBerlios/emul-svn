@@ -1,0 +1,516 @@
+.TH "/prog/cpp/earthmateusb_userland/src/emul.h" 3 "22 Mar 2005" "Version 1.0.1" "EarthMate Userland Library" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+/prog/cpp/earthmateusb_userland/src/emul.h \- Header file for the emul library.  
+
+.SH SYNOPSIS
+.br
+.PP
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBserconfig\fP"
+.br
+.RI "\fIStructure used with em_serconfig_set and em_serconfig_get. \fP"
+.in -1c
+.SS "Defines"
+
+.in +1c
+.ti -1c
+.RI "#define \fBNORMAL\fP   0x0"
+.br
+.RI "\fIFor use with em_devtype function. \fP"
+.ti -1c
+.RI "#define \fBEMATE\fP   0x1"
+.br
+.RI "\fIFor use with em_devtype function. \fP"
+.ti -1c
+.RI "#define \fBCONTROL_DTR\fP   0x20 /* data terminal ready - flow control - host to device */"
+.br
+.RI "\fIFor use with em_linecontrol function. \fP"
+.ti -1c
+.RI "#define \fBCONTROL_RTS\fP   0x10 /* request to send - flow control - host to device */"
+.br
+.RI "\fIFor use with em_linecontrol function. \fP"
+.ti -1c
+.RI "#define \fBCONTROL_RESET\fP   0x08 /* sent with output report (unknown affect) - host to device */"
+.br
+.RI "\fIFor use with em_linecontrol function. \fP"
+.ti -1c
+.RI "#define \fBCONTROL_DROP\fP   0x00 /* drop all lines */"
+.br
+.RI "\fIFor use with em_linecontrol function. \fP"
+.ti -1c
+.RI "#define \fBPAR_ODD\fP   0x30"
+.br
+.RI "\fIFor use with parameter parity of structure serconfig. \fP"
+.ti -1c
+.RI "#define \fBPAR_EVEN\fP   0x10"
+.br
+.RI "\fIFor use with parameter parity of structure serconfig. \fP"
+.ti -1c
+.RI "#define \fBPAR_NONE\fP   0x00"
+.br
+.RI "\fIFor use with parameter parity of structure serconfig. \fP"
+.ti -1c
+.RI "#define \fBEM_MAX_READ\fP   4096"
+.br
+.RI "\fIFor use with em_read function. \fP"
+.ti -1c
+.RI "#define \fBEM_MAX_WRITE\fP   4096"
+.br
+.RI "\fIFor use with em_write function. \fP"
+.ti -1c
+.RI "#define \fBEMT_ACTIVE\fP   1"
+.br
+.RI "\fIFor use with em_change_state function. \fP"
+.ti -1c
+.RI "#define \fBEMT_IDLING\fP   0"
+.br
+.RI "\fIFor use with em_change_state function. \fP"
+.ti -1c
+.RI "#define \fBVENDOR_ID_DELORME\fP   0x1163"
+.br
+.RI "\fIThe USB Vendor ID used to find the Earthmate device with libusb. \fP"
+.ti -1c
+.RI "#define \fBPRODUCT_ID_EARTHMATEUSB\fP   0x0100"
+.br
+.RI "\fIThe USB Product ID used to find the Earthmate device with libusb. \fP"
+.ti -1c
+.RI "#define \fBMAX_READ_WRITE\fP   30"
+.br
+.RI "\fIFor use with em_raw_read and em_raw_write. \fP"
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBem_devtype\fP (int type)"
+.br
+.RI "\fISets the device type, either a normal tty or earthmate device. \fP"
+.ti -1c
+.RI "int \fBem_isemate\fP (void)"
+.br
+.RI "\fIIndicates whether or not device type is set to normal tty or earthmate device. \fP"
+.ti -1c
+.RI "int \fBem_isactive\fP (void)"
+.br
+.RI "\fIIndicates whether or not the device has been opened and thread is active. \fP"
+.ti -1c
+.RI "int \fBem_open\fP (void)"
+.br
+.RI "\fIOpens the earthmate device and starts thread. \fP"
+.ti -1c
+.RI "void \fBem_close\fP (void)"
+.br
+.RI "\fICloses the earthmate device and stops thread. \fP"
+.ti -1c
+.RI "void \fBem_linecontrol\fP (u_int8_t lines)"
+.br
+.RI "\fISets the line state for the earthmate device. \fP"
+.ti -1c
+.RI "int \fBem_serconfig_set\fP (struct \fBserconfig\fP *sconfig)"
+.br
+.RI "\fIFunction for setting serial parameters using serconfig object. \fP"
+.ti -1c
+.RI "int \fBem_serconfig_get\fP (struct \fBserconfig\fP *sconfig)"
+.br
+.RI "\fIFunction for retrieving serial parameters using serconfig object. \fP"
+.ti -1c
+.RI "int \fBem_read\fP (u_int8_t buffer[], int count)"
+.br
+.RI "\fIFunction for retrieving read data from Earthmate device from read buffer. \fP"
+.ti -1c
+.RI "int \fBem_write\fP (const u_int8_t *buffer, int count)"
+.br
+.RI "\fIFunction for sending write data from the program to the write buffer. \fP"
+.ti -1c
+.RI "int \fBem_flush\fP (int queue_selector)"
+.br
+.RI "\fIFunction for clearing either the read, write, or both buffers. \fP"
+.ti -1c
+.RI "int \fBem_read_data_avail\fP (void)"
+.br
+.RI "\fIFunction that indicates how much data is available in the read buffer. \fP"
+.ti -1c
+.RI "int \fBem_write_data_avail\fP (void)"
+.br
+.RI "\fIFunction that indicates how much data is available in the write buffer. \fP"
+.ti -1c
+.RI "int \fBem_datawait\fP (struct timeval *tv, int jumpout)"
+.br
+.RI "\fIFunction that stops execution by sleeping either until data becomes available in the read buffer, or the timeout value expires. Behaves almost like select. \fP"
+.ti -1c
+.RI "int \fBem_select\fP (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)"
+.br
+.RI "\fIFunction that waits on select activity and/or read buffer data becoming available. \fP"
+.ti -1c
+.RI "void \fBem_writewait\fP (void)"
+.br
+.RI "\fICounterpart to tcdrain. Sleeps until all data in write buffer has been written. \fP"
+.ti -1c
+.RI "void \fBem_debuglevel\fP (int mode)"
+.br
+.RI "\fIFunction that sets the debugging level of the emul library. \fP"
+.ti -1c
+.RI "ssize_t \fBREAD\fP (int fd, void *buf, size_t count)"
+.br
+.RI "\fIFunction that can be placed wherever read() is used safely. \fP"
+.ti -1c
+.RI "ssize_t \fBWRITE\fP (int fd, const void *buf, size_t count)"
+.br
+.RI "\fIFunction that can be placed wherever write() is used safely. \fP"
+.ti -1c
+.RI "unsigned int \fBem_getbaudmask\fP (unsigned int rate)"
+.br
+.RI "\fIFunction for retrieving integer baud rate from masked rate. \fP"
+.ti -1c
+.RI "long \fBem_getbaudrate\fP (void)"
+.br
+.RI "\fIFunction for retriving current baudrate of connection with the Earthmate device. \fP"
+.ti -1c
+.RI "int \fBem_raw_read\fP (u_int8_t buffer[])"
+.br
+.RI "\fIFunction that reads directly from the Earthmate device. If the thread is active, this function should \fInever\fP be called as libusb will have you pulling your hair out. \fP"
+.ti -1c
+.RI "int \fBem_raw_write\fP (u_int8_t *buffer, int size)"
+.br
+.RI "\fIFunction that writes directly to the Earthmate device. If the thread is active, this function should \fInever\fP be called as libusb will have you pulling your hair out. \fP"
+.in -1c
+.SH "Detailed Description"
+.PP 
+Header file for the emul library. 
+
+Contains facilities for accessing the earthmate.
+.SH "Define Documentation"
+.PP 
+.SS "#define CONTROL_DROP   0x00 /* drop all lines */"
+.PP
+For use with em_linecontrol function. When used in conjunction with \fIem_linecontrol\fP, this will drop both dtr and rts lines on the Earthmate device. This should be issued without bitmask. 
+.SS "#define CONTROL_DTR   0x20 /* data terminal ready - flow control - host to device */"
+.PP
+For use with em_linecontrol function. When used in conjunction with \fIem_linecontrol\fP, this will raise the dtr line on the Earthmate device. This can be bitmasked with \fICONTROL_RTS\fP and \fICONTROL_RESET\fP.
+.PP
+FYI, DTR is an acronym for data terminal ready. 
+.SS "#define CONTROL_RESET   0x08 /* sent with output report (unknown affect) - host to device */"
+.PP
+For use with em_linecontrol function. When used in conjunction with \fIem_linecontrol\fP, this will cause a device reset which has and as yet unknown affect on the Earthmate device. This can be bitmasked with \fICONTROL_DTR\fP and \fICONTROL_RTS\fP. 
+.SS "#define CONTROL_RTS   0x10 /* request to send - flow control - host to device */"
+.PP
+For use with em_linecontrol function. When used in conjunction with \fIem_linecontrol\fP, this will raise the rts line on the Earthmate device. This can be bitmasked with \fICONTROL_DTR\fP and \fICONTROL_RESET\fP.
+.PP
+FYI, RTS is an acronym for request to send. 
+.SS "#define EM_MAX_READ   4096"
+.PP
+For use with em_read function. This is the max amount of data the read buffer can store. 
+.SS "#define EM_MAX_WRITE   4096"
+.PP
+For use with em_write function. This is the max amount of data the write buffer can store. 
+.SS "#define EMATE   0x1"
+.PP
+For use with em_devtype function. When used in conjunction with \fIem_devtype\fP, this will set the active device to an Earthmate device. 
+.SS "#define EMT_ACTIVE   1"
+.PP
+For use with em_change_state function. When used in conjunction with the \fIem_change_state\fP function, this will change the thread state to active. 
+.SS "#define EMT_IDLING   0"
+.PP
+For use with em_change_state function. When used in conjunction with the \fIem_change_state\fP function, the thread state will change to idle. 
+.SS "#define MAX_READ_WRITE   30"
+.PP
+For use with em_raw_read and em_raw_write. This is the max amount of data that can be transmitted with \fIem_raw_read\fP and \fIem_raw_write\fP.
+.PP
+The device can handle 32 bytes for the input/output reports, but 2 bytes are used for length, control line, uart status, etc. 
+.SS "#define NORMAL   0x0"
+.PP
+For use with em_devtype function. When used in conjunction with \fIem_devtype\fP, this will set the active device to a normal tty device. 
+.SS "#define PAR_EVEN   0x10"
+.PP
+For use with parameter parity of structure serconfig. Indicates even parity. 
+.SS "#define PAR_NONE   0x00"
+.PP
+For use with parameter parity of structure serconfig. Indicates no parity. 
+.SS "#define PAR_ODD   0x30"
+.PP
+For use with parameter parity of structure serconfig. Indicates odd parity. 
+.SH "Function Documentation"
+.PP 
+.SS "void em_close (void)"
+.PP
+Closes the earthmate device and stops thread. \fIem_close\fP should be called when the program has finished communicating with the device. 
+.SS "int em_datawait (struct timeval * tv, int jumpout)"
+.PP
+Function that stops execution by sleeping either until data becomes available in the read buffer, or the timeout value expires. Behaves almost like select. \fBParameters:\fP
+.RS 4
+\fItv\fP The timeout value in seconds and microseconds. Can be NULL for infinite block. 
+.br
+\fIjumpout\fP Can be used to skip over entirely the block on certain previous events like a select call. Not all that useful, see \fIem_select\fP below for a better way. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns 1 if data becomes available in read buffer, or 0 if either timeout value has expired or \fIjumpout\fP has value of 1. 
+.RE
+.PP
+
+.SS "void em_debuglevel (int mode)"
+.PP
+Function that sets the debugging level of the emul library. \fBNote:\fP
+.RS 4
+Debugging is by default 0, which means completely disabled. When enabled, data is printed to stdout or stderr depending on the situation. 
+.RE
+.PP
+
+.SS "void em_devtype (int type)"
+.PP
+Sets the device type, either a normal tty or earthmate device. \fBParameters:\fP
+.RS 4
+\fItype\fP The type of device (\fINORMAL\fP or \fIEMATE\fP). 
+.RE
+.PP
+
+.SS "int em_flush (int queue_selector)"
+.PP
+Function for clearing either the read, write, or both buffers. \fBParameters:\fP
+.RS 4
+\fIqueue_selector\fP The type of flush to perform. Valid value for now is \fITCIOFLUSH\fP. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns 0 on success, <0 on error. 
+.RE
+.PP
+
+.SS "unsigned int em_getbaudmask (unsigned int rate)"
+.PP
+Function for retrieving integer baud rate from masked rate. \fBParameters:\fP
+.RS 4
+\fIrate\fP The masked rate to lookup for the integer value. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns the integer value of the given masked rate. 
+.RE
+.PP
+
+.SS "long em_getbaudrate (void)"
+.PP
+Function for retriving current baudrate of connection with the Earthmate device. \fBReturns:\fP
+.RS 4
+Returns the current baud rate in integer form, or <0 on error. 
+.RE
+.PP
+
+.SS "int em_isactive (void)"
+.PP
+Indicates whether or not the device has been opened and thread is active. \fBReturns:\fP
+.RS 4
+Returns 1 if device is open and thread is active, 0 otherwise. 
+.RE
+.PP
+
+.SS "int em_isemate (void)"
+.PP
+Indicates whether or not device type is set to normal tty or earthmate device. \fBReturns:\fP
+.RS 4
+Returns 1 if device type is \fIEMATE\fP or 0 if device type is \fINORMAL\fP. 
+.RE
+.PP
+
+.SS "void em_linecontrol (u_int8_t lines)"
+.PP
+Sets the line state for the earthmate device. \fBParameters:\fP
+.RS 4
+\fIlines\fP This parameter can be bit masked with \fICONTROL_DTR\fP, \fICONTROL_RTS\fP, and \fICONTROL_RESET\fP. \fICONTROL_DROP\fP should be issued by itself and never masked. \fICONTROL_RESET\fP has an unknown affect. 
+.RE
+.PP
+
+.SS "int em_open (void)"
+.PP
+Opens the earthmate device and starts thread. Must be the first function called before device can be accessed. Only \fIem_debuglevel\fP can be called without opening device first.
+.PP
+\fBReturns:\fP
+.RS 4
+Returns 0 on success, -1 on error. 
+.RE
+.PP
+
+.SS "int em_raw_read (u_int8_t buffer[])"
+.PP
+Function that reads directly from the Earthmate device. If the thread is active, this function should \fInever\fP be called as libusb will have you pulling your hair out. \fBNote:\fP
+.RS 4
+Always use the \fIMAX_READ_WRITE\fP define if you dare to use this function. 
+.RE
+.PP
+
+.SS "int em_raw_write (u_int8_t * buffer, int size)"
+.PP
+Function that writes directly to the Earthmate device. If the thread is active, this function should \fInever\fP be called as libusb will have you pulling your hair out. \fBNote:\fP
+.RS 4
+Always use the \fIMAX_READ_WRITE\fP define if you dare to use this function. 
+.RE
+.PP
+
+.SS "int em_read (u_int8_t buffer[], int count)"
+.PP
+Function for retrieving read data from Earthmate device from read buffer. \fBParameters:\fP
+.RS 4
+\fIbuffer\fP An array of unsigned 8 bit elements pre-allocated before being passed. 
+.br
+\fIcount\fP The amount of data that the function should try to fill \fIbuffer\fP with. 
+.RE
+.PP
+\fBNote:\fP
+.RS 4
+This function is non-blocking. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns amount of data read. >=0 on success, <0 on error. 
+.RE
+.PP
+
+.SS "int em_read_data_avail (void)"
+.PP
+Function that indicates how much data is available in the read buffer. \fBNote:\fP
+.RS 4
+This function is non-blocking. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+On success the amount of data in read buffer is returned, <0 on error. 
+.RE
+.PP
+
+.SS "int em_select (int n, fd_set * readfds, fd_set * writefds, fd_set * exceptfds, struct timeval * timeout)"
+.PP
+Function that waits on select activity and/or read buffer data becoming available. \fBParameters:\fP
+.RS 4
+\fIn\fP The number of fds to watch (always +1). Typically, FD_SETSIZE is passed. 
+.br
+\fIreadfds\fP The fd_set to watch for read activity. Can be NULL. 
+.br
+\fIwritefds\fP The fd_set to watch for write activity. Can be NULL. 
+.br
+\fIexceptfds\fP The fd_set to watch for exceptional activity, like errors. Can be NULL. 
+.br
+\fItimeout\fP The time in seconds and microseconds to wait. Can be NULL. 
+.RE
+.PP
+\fBNote:\fP
+.RS 4
+The function does not return on data becoming available in the write buffer. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns the number of fds with activity. This can include read buffer activity as well. 
+.RE
+.PP
+
+.SS "int em_serconfig_get (struct \fBserconfig\fP * sconfig)"
+.PP
+Function for retrieving serial parameters using serconfig object. \fBReturns:\fP
+.RS 4
+Returns 0 on success, <0 on error. 
+.RE
+.PP
+
+.SS "int em_serconfig_set (struct \fBserconfig\fP * sconfig)"
+.PP
+Function for setting serial parameters using serconfig object. \fBParameters:\fP
+.RS 4
+\fIsconfig\fP Object of \fIserconfig\fP which holds serial parameters to be set. 
+.RE
+.PP
+\fBNote:\fP
+.RS 4
+The \fIserconfig\fP object being passed must have all fields set. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns 0 on success, <0 on error. 
+.RE
+.PP
+
+.SS "int em_write (const u_int8_t * buffer, int count)"
+.PP
+Function for sending write data from the program to the write buffer. \fBParameters:\fP
+.RS 4
+\fIbuffer\fP Pointer to the data that is to be transfered into the write buffer. 
+.br
+\fIcount\fP The amount of data to try and write to the write buffer. 
+.RE
+.PP
+\fBNote:\fP
+.RS 4
+This function is non-blocking. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns amount of data written. >=0 on success, <0 on error. 
+.RE
+.PP
+
+.SS "int em_write_data_avail (void)"
+.PP
+Function that indicates how much data is available in the write buffer. \fBNote:\fP
+.RS 4
+This function is non-blocking. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+On success the amount of data in write buffer is returned, <0 on error. 
+.RE
+.PP
+
+.SS "ssize_t READ (int fd, void * buf, size_t count)"
+.PP
+Function that can be placed wherever read() is used safely. \fBParameters:\fP
+.RS 4
+\fIfd\fP File descriptor to read from. 
+.br
+\fIbuf\fP Buffer to read into. 
+.br
+\fIcount\fP Amount of data to try and read. 
+.RE
+.PP
+\fBNote:\fP
+.RS 4
+Also have a look at \fI\fBem_read()\fP\fP. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns amount of data read, or <0 on error. 
+.RE
+.PP
+
+.SS "ssize_t WRITE (int fd, const void * buf, size_t count)"
+.PP
+Function that can be placed wherever write() is used safely. \fBParameters:\fP
+.RS 4
+\fIfd\fP File descriptor to write to. 
+.br
+\fIbuf\fP Buffer data to write. 
+.br
+\fIcount\fP Amount of data to try and write. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Returns amount of data written, or <0 on error. 
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for EarthMate Userland Library from the source code.

@@ -1,0 +1,779 @@
+--- Makefile.am	2005-03-15 17:01:41.000000000 -0600
++++ Makefile.am	2005-03-22 08:57:52.979652208 -0600
+@@ -37,7 +37,7 @@
+ #
+ sbin_PROGRAMS = gpsd
+ gpsd_SOURCES = gpsd.c
+-gpsd_LDADD = $(LIBM) libgps.la -lm
++gpsd_LDADD = -lemul $(LIBM) libgps.la -lm
+ 
+ 
+ #
+@@ -59,7 +59,7 @@
+ 	sirf.c \
+ 	report.c
+ 
+-libgps_la_LIBADD = $(LIBM) $(LIBC) $(LIBNSL) $(LIBSOCKET)
++libgps_la_LIBADD = -lemul $(LIBM) $(LIBC) $(LIBNSL) $(LIBSOCKET)
+ 
+ #
+ # Create Manpages
+@@ -138,4 +138,4 @@
+ libgps: libgps.c .libs/libgps.a
+ 	$(CC) -o libgps -DTESTMAIN libgps.c .libs/libgps.a
+ sirfmon: sirfmon.c
+-	$(CC) -g -O sirfmon.c -lm -lncurses -o sirfmon
++	$(CC) -g -O sirfmon.c -lm -lncurses -lemul -o sirfmon
+--- drivers.c	2005-03-16 10:52:42.000000000 -0600
++++ drivers.c	2005-03-20 01:00:36.998161592 -0600
+@@ -3,6 +3,7 @@
+ #include <string.h>
+ #include <errno.h>
+ #include <sys/time.h>
++#include <emul.h>
+ 
+ #include "gpsd.h"
+ 
+@@ -34,7 +35,7 @@
+ 	    for (dp = gpsd_drivers; *dp; dp++) {
+ 		char	*trigger = (*dp)->trigger;
+ 
+-		if (trigger && !strncmp(session->outbuffer, trigger, strlen(trigger)) && isatty(session->gNMEAdata.gps_fd)) {
++		if (trigger && !strncmp(session->outbuffer, trigger, strlen(trigger)) && (em_isemate() ? 1 : isatty(session->gNMEAdata.gps_fd))) {
+ 		    gpsd_report(1, "found %s.\n", trigger);
+ 		    gpsd_switch_driver(session, (*dp)->typename);
+ 		    return 1;
+@@ -53,7 +54,7 @@
+ 
+ static int nmea_write_rtcm(struct gps_session_t *session, char *buf, int rtcmbytes)
+ {
+-    return write(session->gNMEAdata.gps_fd, buf, rtcmbytes);
++    return WRITE(session->gNMEAdata.gps_fd, buf, rtcmbytes);
+ }
+ 
+ static void nmea_initializer(struct gps_session_t *session)
+@@ -201,7 +202,7 @@
+ 
+ static void earthmate_initializer(struct gps_session_t *session)
+ {
+-    write(session->gNMEAdata.gps_fd, "EARTHA\r\n", 8);
++    WRITE(session->gNMEAdata.gps_fd, "EARTHA\r\n", 8);
+     sleep(30);
+     session->device_type = &zodiac_binary;
+     zodiac_binary.wrapup = earthmate_close;
+--- garmin.c	2005-03-16 12:07:13.000000000 -0600
++++ garmin.c	2005-03-20 04:45:52.105552968 -0600
+@@ -38,6 +38,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <math.h>
++#include <emul.h>
+ 
+ #define __USE_GNU
+ #include <string.h>
+@@ -481,7 +482,7 @@
+         gpsd_report(4, "SendPacket(), writing %d bytes\n", theBytesToWrite);
+         PrintPacket ( session,  aPacket);
+ 
+-	theBytesReturned = write( session->gNMEAdata.gps_fd
++	theBytesReturned = WRITE( session->gNMEAdata.gps_fd
+ 		    , aPacket, theBytesToWrite);
+ 	gpsd_report(4, "SendPacket(), wrote %d bytes\n", theBytesReturned);
+ 
+@@ -495,7 +496,7 @@
+ 	// So here goes just in case
+ 	if( 0 == (theBytesToWrite % ASYNC_DATA_SIZE) ) {
+ 		char *n = "";
+-		theBytesReturned = write( session->gNMEAdata.gps_fd
++		theBytesReturned = WRITE( session->gNMEAdata.gps_fd
+ 		    , &n, 0);
+ 	}
+ }
+@@ -535,7 +536,7 @@
+ 	// the USB not too bad for a start
+ 	long theBytesReturned = 0;
+ 
+-	theBytesReturned = read(session->gNMEAdata.gps_fd
++	theBytesReturned = READ(session->gNMEAdata.gps_fd
+ 		, &session->GarminBuffer[session->GarminBufferLen]
+ 		, ASYNC_DATA_SIZE);
+         if ( 0 >  theBytesReturned ) {
+@@ -641,7 +642,8 @@
+     // get and print the driver Version info
+ 
+     FD_ZERO(&fds); 
+-    FD_SET(session->gNMEAdata.gps_fd, &fds);
++	 if (!em_isemate())
++    	FD_SET(session->gNMEAdata.gps_fd, &fds);
+ 
+     // Wait, nicely, until the device returns the Version info
+     // Toss any other packets, up to 4
+--- gpsd.c	2005-03-16 10:52:26.000000000 -0600
++++ gpsd.c	2005-03-21 01:26:31.683231648 -0600
+@@ -14,6 +14,7 @@
+ #include <netinet/in.h>
+ #include <assert.h>
+ 
++
+ #include "config.h"
+ #if defined (HAVE_PATH_H)
+ #include <paths.h>
+@@ -30,6 +31,7 @@
+ #endif
+ 
+ #include "gpsd.h"
++#include <emul.h>
+ 
+ #define QLEN			5
+ 
+@@ -236,7 +238,10 @@
+ 			 * The minimum delay time is probably constant
+ 			 * across any given type of UART.
+ 			 */
+-			tcdrain(session->gNMEAdata.gps_fd);
++			if (em_isemate())
++				em_writewait();
++			else
++				tcdrain(session->gNMEAdata.gps_fd);
+ 			usleep(50000);
+ 			gpsd_set_speed(session, (speed_t)i, 1);
+ 		    }
+@@ -287,6 +292,10 @@
+ 		    session->gpsd_device = strdup(bufcopy);
+ 		    session->gNMEAdata.baudrate = 0;	/* so it'll hunt */
+ 		    session->driverstate = 0;
++			 if (strcmp(session->gpsd_device, "emate")==0)
++			 	em_devtype(EMATE);
++			else
++				em_devtype(NORMAL);
+ 		    if (gpsd_activate(session) >= 0) {
+ 			gpsd_report(1, "Switch to %s succeeded\n", bufcopy);
+ 			free(stash_device);
+@@ -296,6 +305,10 @@
+ 			session->gpsd_device = stash_device;
+ 			session->gNMEAdata.baudrate = 0;
+ 			session->driverstate = 0;
++			if (strcmp(session->gpsd_device, "emate")==0)
++				em_devtype(EMATE);
++			else
++				em_devtype(NORMAL);
+ 		    }
+ 		}
+ 		gpsd_report(1, "GPS is %s\n", session->gpsd_device);
+@@ -627,6 +640,14 @@
+ 
+     if (go_background)
+ 	daemonize();
++	
++	if (strcmp(device_name, "emate")==0)
++		em_devtype(EMATE);
++	else
++		em_devtype(NORMAL);
++		
++	if (debuglevel>0)
++		em_debuglevel(debuglevel);
+ 
+     if (pid_file) {
+ 	FILE *fp;
+@@ -679,7 +700,8 @@
+ 	    gpsd_report(0, "exiting - GPS device nonexistent or can't be read\n");
+ 	    exit(2);
+ 	}
+-	FD_SET(session->gNMEAdata.gps_fd, &all_fds);
++	if (!em_isemate())
++		FD_SET(session->gNMEAdata.gps_fd, &all_fds);
+     }
+ 
+     for (;;) {
+@@ -692,13 +714,23 @@
+ 	 * actually matter here since select returns whenever one of
+ 	 * the file descriptors in the set goes ready. 
+ 	 */
+-	tv.tv_sec = 1; tv.tv_usec = 0;
++	tv.tv_sec = 1;
++	tv.tv_usec = 0;
++	 if (em_isemate()) {
++		if (em_select(FD_SETSIZE, &rfds, NULL, NULL, &tv) < 0) {
++			if (errno == EINTR)
++				continue;
++			gpsd_report(0, "em_select: %s\n", strerror(errno));
++			exit(2);
++		}
++	 } else {
+ 	if (select(FD_SETSIZE, &rfds, NULL, NULL, &tv) < 0) {
+ 	    if (errno == EINTR)
+ 		continue;
+ 	    gpsd_report(0, "select: %s\n", strerror(errno));
+ 	    exit(2);
+ 	}
++	}
+ 
+ 	/* always be open to new connections */
+ 	if (FD_ISSET(msock, &rfds)) {
+@@ -722,7 +754,8 @@
+ 	if (nowait && session->gNMEAdata.gps_fd == -1) {
+ 	    gpsd_deactivate(session);
+ 	    if (gpsd_activate(session) >= 0) {
+-		FD_SET(session->gNMEAdata.gps_fd, &all_fds);
++		 if (!em_isemate())
++			FD_SET(session->gNMEAdata.gps_fd, &all_fds);
+ 		notify_watchers("GPSD,X=1\r\n");
+ 	    }
+ 	}
+@@ -730,7 +763,8 @@
+ 	/* get data from it */
+ 	if (session->gNMEAdata.gps_fd >= 0 && gpsd_poll(session) < 0) {
+ 	    gpsd_report(3, "GPS is offline\n");
+-	    FD_CLR(session->gNMEAdata.gps_fd, &all_fds);
++		 if (!em_isemate())
++	    	FD_CLR(session->gNMEAdata.gps_fd, &all_fds);
+ 	    gpsd_deactivate(session);
+ 	    notify_watchers("GPSD,X=0\r\n");
+ 	}
+@@ -742,7 +776,7 @@
+ 	/* accept and execute commands for all clients */
+ 	need_gps = 0;
+ 	for (fd = 0; fd < FD_SETSIZE; fd++) {
+-	    if (fd == msock || fd == session->gNMEAdata.gps_fd)
++	    if (fd == msock || (em_isemate() ? 0 : fd == session->gNMEAdata.gps_fd))
+ 		continue;
+ 	    /*
+ 	     * GPS must be opened if commands are waiting or any client is
+@@ -752,7 +786,8 @@
+ 		if (session->gNMEAdata.gps_fd == -1) {
+ 		    gpsd_deactivate(session);
+ 		    if (gpsd_activate(session) >= 0) {
+-			FD_SET(session->gNMEAdata.gps_fd, &all_fds);
++			 if (!em_isemate())
++				FD_SET(session->gNMEAdata.gps_fd, &all_fds);
+ 			notify_watchers("GPSD,X=1\r\n");
+ 		    }
+ 		}
+@@ -780,12 +815,13 @@
+ 		    }
+ 		}
+ 	    }
+-	    if (fd != session->gNMEAdata.gps_fd && fd != msock && FD_ISSET(fd, &all_fds))
++	    if ((em_isemate() ? 1 : fd != session->gNMEAdata.gps_fd) && fd != msock && FD_ISSET(fd, &all_fds))
+ 		need_gps++;
+ 	}
+ 
+ 	if (!nowait && !need_gps && session->gNMEAdata.gps_fd != -1) {
+-	    FD_CLR(session->gNMEAdata.gps_fd, &all_fds);
++		if (!em_isemate())
++	    	FD_CLR(session->gNMEAdata.gps_fd, &all_fds);
+ 	    session->gNMEAdata.gps_fd = -1;
+ 	    gpsd_deactivate(session);
+ 	}
+--- libgps.c	2005-03-16 14:50:22.000000000 -0600
++++ libgps.c	2005-03-20 05:15:07.585679424 -0600
+@@ -5,6 +5,7 @@
+ #include <string.h>
+ #include <errno.h>
+ #include <sys/time.h>
++#include <emul.h>
+ 
+ #include "gpsd.h"
+ 
+@@ -250,7 +251,7 @@
+     double received = 0;
+ 
+     /* the daemon makes sure that every read is NUL-terminated */
+-    n = read(gpsdata->gps_fd, buf, sizeof(buf)-1);
++    n = READ(gpsdata->gps_fd, buf, sizeof(buf)-1);
+     if (n < 0) {
+         /* error */
+ 	return -1;
+@@ -273,7 +274,7 @@
+ int gps_query(struct gps_data_t *gpsdata, const char *requests)
+ /* query a gpsd instance for new data */
+ {
+-    if (write(gpsdata->gps_fd, requests, strlen(requests)) <= 0)
++    if (WRITE(gpsdata->gps_fd, requests, strlen(requests)) <= 0)
+ 	return -1;
+     return gps_poll(gpsdata);
+ }
+--- libgpsd_core.c	2005-03-16 15:23:44.000000000 -0600
++++ libgpsd_core.c	2005-03-20 01:20:36.503809016 -0600
+@@ -8,6 +8,7 @@
+ #include <sys/ioctl.h>
+ #include <sys/socket.h>
+ #include <sys/time.h>
++#include <emul.h>
+ #include "config.h"
+ #ifdef HAVE_SYS_FILIO_H
+ #include <sys/filio.h>	/* for FIONREAD on BSD systems */
+@@ -111,8 +112,12 @@
+ static int is_input_waiting(int fd)
+ {
+     int	count;
++	 if (fd == 0 && em_isemate()) {
++	 	count = em_read_data_avail();
++	} else {
+     if (fd < 0 || ioctl(fd, FIONREAD, &count) < 0)
+ 	return -1;
++	}
+     return count;
+ }
+ 
+--- nmea_parse.c	2005-03-15 22:07:19.000000000 -0600
++++ nmea_parse.c	2005-03-20 05:10:36.722856832 -0600
+@@ -22,6 +22,7 @@
+ #include <ctype.h>
+ #define __USE_XOPEN
+ #include <time.h>
++#include <emul.h>
+ 
+ #include "gpsd.h"
+ 
+@@ -610,7 +611,11 @@
+     va_end(ap);
+     strcat(buf, "*");
+     nmea_add_checksum(buf);
+-    status = write(fd, buf, strlen(buf));
++    status = WRITE(fd, buf, strlen(buf));
++	 if (em_isemate())
++	 	em_writewait();
++	else
++		tcdrain(fd);
+     if (status == strlen(buf)) {
+ 	gpsd_report(2, "=> GPS: %s\n", buf);
+ 	return status;
+--- packet.c	2005-03-16 15:19:43.000000000 -0600
++++ packet.c	2005-03-20 00:33:07.102983784 -0600
+@@ -36,6 +36,7 @@
+ #endif
+ 
+ #include "gpsd.h"
++#include <emul.h>
+ 
+ #ifdef TESTMAIN
+ #include <stdarg.h>
+@@ -301,7 +302,7 @@
+ 	waiting = room;
+ 
+ #ifndef TESTMAIN
+-    newdata = read(session->gNMEAdata.gps_fd, session->inbufptr, waiting);
++    newdata = READ(session->gNMEAdata.gps_fd, session->inbufptr, waiting);
+ #else
+     newdata = waiting;
+ #endif /* TESTMAIN */
+@@ -400,8 +401,12 @@
+     gpsd_report(5, "packet_sniff begins\n");
+     for (n = 0; n < SNIFF_RETRIES; n += count) {
+ 	count = 0;
+-	if (ioctl(session->gNMEAdata.gps_fd, FIONREAD, &count) < 0)
+-	    return BAD_PACKET;
++	if (em_isemate()) {
++		count = em_read_data_avail();
++	} else {
++		if (ioctl(session->gNMEAdata.gps_fd, FIONREAD, &count) < 0)
++	    	return BAD_PACKET;
++	}
+ 	if (count && packet_get(session, count)) {
+ 	    /* push back the last packet grabbed */
+ 	    if (session->outbuflen + session->inbuflen < MAX_PACKET_LENGTH) {
+--- serial.c	2005-03-16 15:09:40.000000000 -0600
++++ serial.c	2005-03-20 17:17:02.221368256 -0600
+@@ -4,6 +4,7 @@
+ #include <fcntl.h>
+ #include <errno.h>
+ #include <ctype.h>
++#include <emul.h>
+ #if defined(HAVE_SYS_MODEM_H)
+ #include <sys/modem.h>
+ #endif /* HAVE_SYS_MODEM_H */
+@@ -37,6 +38,7 @@
+ 		   unsigned int speed, unsigned int stopbits)
+ {
+     unsigned int	rate;
++	 struct serconfig sconfig;
+ 
+     if (speed < 300)
+ 	rate = 0;
+@@ -57,6 +59,7 @@
+     else
+       rate =  B57600;
+ 
++	if (!em_isemate()) {
+     tcflush(session->gNMEAdata.gps_fd, TCIOFLUSH);	/* toss stale data */
+     if (speed!=cfgetispeed(&session->ttyset) || stopbits!=session->gNMEAdata.stopbits) {
+ 	cfsetispeed(&session->ttyset, (speed_t)rate);
+@@ -67,6 +70,19 @@
+ 	    return 0;
+ 	tcflush(session->gNMEAdata.gps_fd, TCIOFLUSH);
+     }
++	} else {
++		em_flush(TCIOFLUSH);
++		if (speed!=cfgetispeed(&session->ttyset) || stopbits!=session->gNMEAdata.stopbits) {
++			cfsetispeed(&session->ttyset, (speed_t)rate);
++			cfsetospeed(&session->ttyset, (speed_t)rate);
++			sconfig.baudrate = em_getbaudmask(rate);
++			sconfig.databits = (stopbits==2 ? 7 : 8);
++			sconfig.stopbits = stopbits;
++			sconfig.parity = PAR_NONE;
++			em_serconfig_set(&sconfig);
++			em_flush(TCIOFLUSH);
++		}
++	}
+ 
+     if ((session->packet_type = packet_sniff(session)) == BAD_PACKET)
+ 	return 0;
+@@ -84,14 +100,24 @@
+     /* every rate we're likely to see on a GPS */
+     static unsigned int rates[] = {4800, 9600, 19200, 38400, 57600};
+ 
++	 if (em_isemate()) {
++	 	gpsd_report(1, "opening Earthmate GPS (emul library)\n");
++		if (em_open() < 0) {
++			gpsd_report(1, "device open failed\n");
++			return -1;
++		}
++		session->gNMEAdata.gps_fd = 0;
++		em_linecontrol(CONTROL_DTR | CONTROL_RTS);
++	 } else {
+     gpsd_report(1, "opening GPS data source at %s\n", session->gpsd_device);
+     if ((session->gNMEAdata.gps_fd = open(session->gpsd_device, O_RDWR|O_NOCTTY)) < 0) {
+ 	gpsd_report(1, "device open failed: %s\n", strerror(errno));
+ 	return -1;
+     }
++	 }
+ 
+     session->packet_type = BAD_PACKET;
+-    if (isatty(session->gNMEAdata.gps_fd)) {
++    if ((em_isemate() ? 1 : isatty(session->gNMEAdata.gps_fd))) {
+ #if NON_NMEA_ENABLE
+ 	struct gps_type_t **dp;
+ 
+@@ -104,6 +130,7 @@
+ 	gpsd_report(3, "no probe matched...\n");
+ #endif /* NON_NMEA_ENABLE */
+ 
++	if (!em_isemate()) {
+ 	/* Save original terminal parameters */
+ 	if (tcgetattr(session->gNMEAdata.gps_fd,&session->ttyset_old) != 0)
+ 	  return -1;
+@@ -117,6 +144,7 @@
+ 	session->ttyset.c_cflag |= CREAD | CLOCAL;
+ 	session->ttyset.c_iflag = session->ttyset.c_oflag = session->ttyset.c_lflag = (tcflag_t) 0;
+ 	session->ttyset.c_oflag = (ONLCR);
++	}
+ 
+ 	if (session->gNMEAdata.baudrate) {
+ 	    gpsd_report(1, "setting speed %d, %d stopbits, no parity\n", 
+@@ -142,6 +170,13 @@
+ 
+ void gpsd_close(struct gps_session_t *session)
+ {
++	if (em_isemate() && em_isactive()) {
++		em_linecontrol(CONTROL_DROP);
++		em_close();
++		return;
++	} else if (em_isemate())
++		return;
++
+     if (session->gNMEAdata.gps_fd != -1) {
+ 	if (isatty(session->gNMEAdata.gps_fd)) {
+ 	    /* force hangup on close on systems that don't do HUPCL properly */
+--- sirf.c	2005-03-16 14:20:03.000000000 -0600
++++ sirf.c	2005-03-20 04:37:05.227650584 -0600
+@@ -27,6 +27,7 @@
+ #include <time.h>
+ #include <sys/types.h>
+ #include <stdio.h>
++#include <emul.h>
+ 
+ #include "gpsd.h"
+ #if defined(SIRFII_ENABLE) && defined(BINARY_ENABLE)
+@@ -54,8 +55,11 @@
+    for (i = 0; i < len+8; i++)
+        sprintf(buf+strlen(buf), " %02x", msg[i]);
+    gpsd_report(4, "Writing SiRF control type %02x:%s\n", msg[4], buf);
+-   ok = write(fd, msg, len+8) == len+8;
+-   tcdrain(fd);
++   ok = WRITE(fd, msg, len+8) == len+8;
++	if (!em_isemate())
++   	tcdrain(fd);
++	else
++		em_writewait();
+    return(ok);
+ }
+ 
+--- sirfmon.c	2005-03-16 14:42:11.000000000 -0600
++++ sirfmon.c	2005-03-22 09:00:50.585651992 -0600
+@@ -32,6 +32,7 @@
+ #include <sys/types.h>
+ #include <sys/times.h>
+ #include <sys/ioctl.h>
++#include <emul.h>
+ 
+ #define BUFLEN		2048
+ 
+@@ -77,7 +78,7 @@
+ 
+ static struct termios ttyset;
+ static WINDOW *mid2win, *mid4win, *mid6win, *mid7win, *mid9win, *mid13win;
+-static WINDOW *cmdwin, *debugwin;
++static WINDOW *cmdwin, *emulwin, *debugwin;
+ 
+ #define NO_PACKET	0
+ #define SIRF_PACKET	1
+@@ -86,6 +87,7 @@
+ static int set_speed(unsigned int speed, unsigned int stopbits)
+ {
+     unsigned int	rate, count, st, state;
++    struct serconfig sconfig;
+     unsigned char	c;
+ 
+     if (speed < 300)
+@@ -107,6 +109,7 @@
+     else
+       rate =  B57600;
+ 
++    if (!em_isemate()) {
+     tcflush(LineFd, TCIOFLUSH);	/* toss stale data */
+     cfsetispeed(&ttyset, (speed_t)rate);
+     cfsetospeed(&ttyset, (speed_t)rate);
+@@ -115,11 +118,21 @@
+     if (tcsetattr(LineFd, TCSANOW, &ttyset) != 0)
+ 	return NO_PACKET;
+     tcflush(LineFd, TCIOFLUSH);
++    } else {
++    em_flush(TCIOFLUSH);
++    sconfig.baudrate = em_getbaudmask(rate);
++    sconfig.databits = (stopbits==2 ? 7 : 8);
++    sconfig.stopbits = stopbits;
++    sconfig.parity = PAR_NONE;
++    em_serconfig_set(&sconfig);
++    em_flush(TCIOFLUSH);
++    }
+ 
+     /* sniff for NMEA or SiRF packet */
+     state = 0;
+     for (count = 0; count < 1200; count++) {
+-	if ((st = read(LineFd, &c, 1)) < 0)
++   em_datawait(NULL, 0);
++	if ((st = READ(LineFd, &c, 1)) < 0)
+ 	    return 0;
+ 	else
+ 	    count += st;
+@@ -184,7 +197,7 @@
+     va_end(ap);
+     strcat(buf, "*");
+     nmea_add_checksum(buf);
+-    status = write(fd, buf, strlen(buf));
++    status = WRITE(fd, buf, strlen(buf));
+     if (status == strlen(buf)) {
+ 	return status;
+     } else {
+@@ -194,7 +207,8 @@
+ 
+ int main (int argc, char **argv)
+ {
+-    int len,i,stopbits,bps,speed,v,st;
++    int len,i,stopbits,bps,st;
++    unsigned int v;
+     char *p;
+     fd_set select_set;
+     unsigned char buf[BUFLEN];
+@@ -206,6 +220,12 @@
+ 	exit(1);
+     }
+ 
++    if (strcmp(argv[1], "emate")==0)
++       em_devtype(EMATE);
++    else
++       em_devtype(NORMAL);
++
++    if (!em_isemate()) {
+     if ((LineFd = open(argv[1],O_RDWR)) < 0) {
+ 	perror(argv[1]);
+ 	return 1;
+@@ -223,6 +243,13 @@
+     ttyset.c_cflag |= CREAD | CLOCAL;
+     ttyset.c_iflag = ttyset.c_oflag = ttyset.c_lflag = (tcflag_t) 0;
+     ttyset.c_oflag = (ONLCR);
++    } else {
++    if (em_open()<0) {
++    fprintf(stderr, "Failed to open earthmate device, check permissions?\n");
++    exit(1);
++    }
++    em_linecontrol(CONTROL_DTR | CONTROL_RTS);
++    }
+ 
+     for (stopbits = 1; stopbits <= 2; stopbits++)
+ 	for (ip = rates; ip < rates + sizeof(rates)/sizeof(rates[0]); ip++)
+@@ -239,6 +266,10 @@
+ 	}
+  bailout:
+     fputs("Can't sync up with device!\n", stderr);
++    if (em_isemate()) {
++    em_linecontrol(CONTROL_DROP);
++    em_close();
++    }
+     exit(1);
+  rate_ok:;
+     bps = *ip;
+@@ -256,7 +287,12 @@
+     mid9win   = subwin(stdscr, 3,  48, 13, 32);
+     mid13win  = subwin(stdscr, 3,  48, 16, 32);
+     cmdwin    = subwin(stdscr, 1,  48, 19, 32);
+-    debugwin  = subwin(stdscr, 0,   0, 21, 0);
++    if (em_isemate()) {
++    emulwin   = subwin(stdscr, 3,  80, 21, 0);
++    debugwin  = subwin(stdscr, 0,   0, 24, 0);
++    } else {
++    debugwin = subwin(stdscr, 0, 0, 21, 0);
++    }
+     scrollok(debugwin,TRUE);
+     wsetscrreg(debugwin, 0, LINES-21);
+ 
+@@ -326,6 +362,15 @@
+     wattrset(stdscr, A_NORMAL);
+     mvwprintw(stdscr, 20, 47, "%4d N %d", bps, stopbits);
+ 
++    if (em_isemate()) {
++    wborder(emulwin, 0, 0, 0, 0, 0, 0, 0, 0),
++    wattrset(emulwin, A_BOLD);
++    mvwprintw(emulwin, 1, 2, "Read queue: ");
++    mvwprintw(emulwin, 1, 45, "Write queue: ");
++    mvwprintw(emulwin, 2, 45, " Earthmate Buffer(MAX 4096 R/W) ");
++    wattrset(emulwin, A_NORMAL);
++    }
++
+     wmove(debugwin,0, 0);
+ 
+     FD_ZERO(&select_set);
+@@ -346,14 +391,27 @@
+ 	wrefresh(mid7win);
+ 	wrefresh(mid9win);
+ 	wrefresh(mid13win);
++	if (em_isemate())
++		wrefresh(emulwin);
+ 	wrefresh(debugwin);
+ 	wrefresh(cmdwin);
+ 
++   if (em_isemate()) {
++   mvwprintw(emulwin, 1, 15, "%d bytes  ", em_read_data_avail());
++   mvwprintw(emulwin, 1, 60, "%d bytes  ", em_write_data_avail());
++   }
++
+ 	FD_SET(0,&select_set);
++	if (!em_isemate())
+ 	FD_SET(LineFd,&select_set);
+ 
+-	if (select(LineFd + 1,&select_set,NULL,NULL,NULL) < 0)
+-	    break;
++	if (em_isemate()) {
++		if (em_select(1, &select_set, NULL, NULL, NULL) < 0)
++			break;
++	} else {
++		if (select(LineFd + 1,&select_set,NULL,NULL,NULL) < 0)
++			break;
++	}
+ 
+ 	if (FD_ISSET(0,&select_set)) {
+ 	    wmove(cmdwin, 0,5);
+@@ -361,15 +419,14 @@
+ 	    echo();
+ 	    wgetstr(cmdwin, line);
+ 	    noecho();
+-	    //move(0,0);
+-	    //clrtoeol();
+-	    //refresh();
+ 	    wrefresh(mid2win);
+ 	    wrefresh(mid4win);
+ 	    wrefresh(mid6win);
+ 	    wrefresh(mid7win);
+ 	    wrefresh(mid9win);
+ 	    wrefresh(mid13win);
++	    if (em_isemate())
++	    wrefresh(emulwin);
+ 	    wrefresh(debugwin);
+ 	    wrefresh(cmdwin);
+ 
+@@ -470,6 +527,11 @@
+     if (logfile != NULL)
+ 	fclose(logfile);
+ 
++    if (em_isemate()) {
++    em_linecontrol(CONTROL_DROP);
++    em_close();
++    }
++
+     endwin();
+     exit(0);
+ }
+@@ -829,19 +891,24 @@
+ 	struct timeval timeval;
+ 
+ 	FD_ZERO(&select_set);
+-	FD_SET(LineFd,&select_set);
++	if (!em_isemate())
++	    FD_SET(LineFd,&select_set);
+ 	timeval.tv_sec = 0;
+ 	timeval.tv_usec = 500000;
+ 
++	if (!em_isemate()) {
+ 	if (select(LineFd + 1,&select_set,NULL,NULL,&timeval) < 0)
+ 	    return EOF;
+ 
+ 	if (!FD_ISSET(LineFd,&select_set))
+ 	    return EOF;
++	} else
++	    if (em_datawait(&timeval, 0)<1)
++	        return EOF;
+ 
+ 	usleep(100000);
+ 
+-	if ((cnt = read(LineFd,inbuf,BUFLEN)) <= 0)
++	if ((cnt = READ(LineFd,inbuf,BUFLEN)) <= 0)
+ 	    return EOF;
+ 
+ 	pos = 0;
+@@ -917,7 +984,7 @@
+ 	wprintw(debugwin, " %02x",buf[i]);
+     wprintw(debugwin, "\n");
+ 
+-    return (write(LineFd,buf,len) == len);
++    return (WRITE(LineFd,buf,len) == len);
+ }
+ 
+ /*
+--- zodiac.c	2005-03-14 12:15:21.000000000 -0600
++++ zodiac.c	2005-03-20 05:16:33.799572920 -0600
+@@ -7,6 +7,7 @@
+ #include <unistd.h>
+ #define __USE_ISOC99	1	/* needed to get log2() from math.h */
+ #include <math.h>
++#include <emul.h>
+ 
+ #include "config.h"
+ #include "gpsd.h"
+@@ -53,7 +54,7 @@
+ 	*p++ = *(data+1); *p++ = *data;
+ 	data += 2; len -= 2;
+     }
+-    return write(fd, buf, len);
++    return WRITE(fd, buf, len);
+ }
+ #else
+ #define end_write write
+@@ -321,7 +322,7 @@
+ {
+     unsigned char c;
+ 
+-    if (read(session->gNMEAdata.gps_fd, &c, 1) != 1)
++    if (READ(session->gNMEAdata.gps_fd, &c, 1) != 1)
+ 	return 0;
+     else {
+ 	static int state = ZODIAC_HUNT_FF;
+@@ -339,7 +340,7 @@
+ 	case ZODIAC_HUNT_A:
+ 	    /* A better be right after E */
+ 	    if ((c == 'A') && (session->gNMEAdata.gps_fd != -1))
+-		write(session->gNMEAdata.gps_fd, "EARTHA\r\n", 8);
++		WRITE(session->gNMEAdata.gps_fd, "EARTHA\r\n", 8);
+ 	    state = ZODIAC_HUNT_FF;
+ 	    break;
+ 	case ZODIAC_HUNT_81:

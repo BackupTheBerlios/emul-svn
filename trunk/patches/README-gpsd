@@ -1,0 +1,50 @@
+	To apply the patch, copy or move the patch into the
+gpsd-2.17 directory.  Go ahead and change the user to root,
+as we will soon be installing.  Before issuing the following
+command, please make sure you are also in the gpsd-2.17 directory:
+
+$ patch < gpsd-2.17-emul.patch
+
+The patch should apply cleanly... see below if it does not.
+
+Next you will most likely need to run the following two commands:
+
+$ aclocal && automake
+$ libtoolize --copy --force
+
+Then run the configure script to set up the daemon however you wish.
+ (configure --help for options)
+
+After this it should be sufficient to run:
+
+$ make install
+
+	If you recieve error messages and do not know how to resolve
+them, please leave a bug report on the emul project page listed
+further below.
+
+	To test the install, issue the below command in a terminal:
+
+$ gpsd -f emate -N
+
+The 'N' option will cause the daemon to run in the foreground and
+print output to the terminal as clients connect.  Then you can
+simply telnet into the daemon via:
+
+$ telnet localhost 2947
+$ Trying 127.0.0.1...
+$ Connected to localhost.
+$ Escape character is '^]'.
+ then issue the gpsd command 'r' to enable raw mode... nmea output
+should appear.
+
+or if you do not have telnet installed (insecure, etc), try running
+xgps or some other client that was included with the gps daemon.
+
+
+
+http://developer.berlios.de/projects/emul/
+
+You may also contact me via email at lmendez19@austin.rr.com
+
+Enjoy!
