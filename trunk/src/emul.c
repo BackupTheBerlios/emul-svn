@@ -91,7 +91,7 @@ int em_open() {
 	int ret;
 
 	if (em_device.udev) {
-		if (em_debug) fprintf(stderr, "Device has already been opened.\n");
+		if (em_debug) fprintf(stderr, "em_open: Device has already been opened.\n");
 		return -1;
 	}
 	
@@ -140,14 +140,14 @@ grab_interface:
 		usb_get_driver_np(em_device.udev, 0, dname, 31);
 		if (strcmp(dname, "cypress") == 0 || strncmp(dname, "hid", 3) == 0) {
 			usb_detach_kernel_driver_np(em_device.udev, 0);
-			if (em_debug) fprintf(stdout, "dettached driver %s from device\n", dname);
+			if (em_debug) fprintf(stdout, "em_open: dettached driver %s from device\n", dname);
 		}
 	}
 	#endif
 	
 	ret = usb_claim_interface(em_device.udev, 0);
 	if (ret < 0) {
-		if (em_debug) fprintf(stderr, "Failed to claim device\n");
+		if (em_debug) fprintf(stderr, "em_open: failed to claim device\n");
 		usb_close(em_device.udev);
 		em_device.udev = NULL;
 		return ret;
@@ -193,6 +193,26 @@ void em_close() {
 		buf_free(write_buffer);
 		buf_free(read_buffer);
 	}
+}
+
+int em_replug() {
+	if (em_device.udev) {
+		em_device.thread_state = QUIT;
+		pthread_join(rwthread, NULL);
+		usb_reset(em_device.udev);
+		usb_release_interface(em_device.udev, 0);
+		usb_close(em_device.udev);
+		em_device.udev = NULL;
+
+		pthread_mutex_destroy(&write_buffer->buf_mutex);
+		pthread_mutex_destroy(&read_buffer->buf_mutex);
+		
+		buf_free(write_buffer);
+		buf_free(read_buffer);
+
+		return em_open();
+	}
+	return em_open();
 }
 
 void em_linecontrol(u_int8_t lines)
@@ -416,11 +436,11 @@ void *rw_thread(void *arg) {
 					if (ret > buf_space_avail(read_buffer))
 						buf_clear(read_buffer);
 					buf_put(read_buffer, (char *)buffer, ret);
-					if (em_debug) fprintf(stdout, "read buffer reports %d byte load\n", buf_data_avail(read_buffer));
+					if (em_debug>2) fprintf(stdout, "rw_thread: read buffer reports %d byte load\n", buf_data_avail(read_buffer));
 					pthread_mutex_unlock(&read_buffer->buf_mutex);
 				} else if (ret < 0 && (ret != -110)) {
 					EXIT = 1;
-					if (em_debug) fprintf(stderr, "DOREAD error - %d\n", ret);
+					if (em_debug) fprintf(stderr, "rw_thread: DOREAD error - %d\n", ret);
 				}
 				break;
 			case DOWRITE:
@@ -430,7 +450,7 @@ void *rw_thread(void *arg) {
 				ret = em_raw_write(wbuffer, count);
 				if (ret < 0) {
 					EXIT = 1;
-					if (em_debug) fprintf(stderr, "DOWRITE error - %d\n", ret);
+					if (em_debug) fprintf(stderr, "rw_thread: DOWRITE error - %d\n", ret);
 				}
 				break;
 			case CONTROL:
@@ -471,7 +491,7 @@ int em_read(u_int8_t buffer[], int count)
 	
 	free(tbuf);
 	
-	if (em_debug) fprintf(stdout, "em_read: read %d bytes from read buffer\n", ret);
+	if (em_debug>2) fprintf(stdout, "em_read: read %d bytes from read buffer\n", ret);
 	
 	return ret;
 }
@@ -492,7 +512,7 @@ int em_write(const u_int8_t *buffer, int count)
 	
 	pthread_mutex_lock(&write_buffer->buf_mutex);
 	ret = buf_put(write_buffer, (char *)buffer, count);
-	if (em_debug) fprintf(stdout, "em_write: write_buffer reports %d byte load\n", buf_data_avail(write_buffer));
+	if (em_debug>2) fprintf(stdout, "em_write: write_buffer reports %d byte load\n", buf_data_avail(write_buffer));
 	pthread_mutex_unlock(&write_buffer->buf_mutex);
 	
 	return ret;

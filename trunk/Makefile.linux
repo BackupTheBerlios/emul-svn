@@ -18,7 +18,7 @@ MANDIR=$(PREFIX)/man
 CFLAGS=-Wall -Werror -pedantic
 EMULVER=1.0.2
 
-all: dirs emul.so emul.la sirfmon emul_test emul_test2
+all: dirs emul.so emul.la sirfmon emul_test emul_test2 emul_replug
 
 emul.so: dirs
 	@echo "   Compiling shared library..."
@@ -55,6 +55,13 @@ emul_test2: dirs emul.so
 	@$(CC) -I./src -c src/emul_test2.c -o obj/emul_test2.o
 	@$(CC) -L. -lemul obj/emul_test2.o -o emul_test2
 
+emul_replug: dirs emul.so
+	@echo "   Compiling emul_replug..."
+	@# make sure symlink is in place
+	@ln -sf libemul.so.$(EMULVER) libemul.so
+	@$(CC) -I./src -c src/emul_replug.c -o obj/emul_replug.o
+	@$(CC) -L. -lemul obj/emul_replug.o -o emul_replug
+
 dirs:
 	mkdir -p ./obj
 
@@ -70,7 +77,7 @@ install: all
 		echo "   Installing static library into $(LIBDIR)/ - (libemul.a)"; \
 		cp libemul.a $(LIBDIR)/; fi
 	@echo "   emul library v$(EMULVER) installed successfully in $(LIBDIR)."
-	@cp -v sirfmon emul_test $(BINDIR)/
+	@cp -v sirfmon emul_test emul_replug $(BINDIR)/
 	@echo "   emul programs installed successfully in $(BINDIR)."
 	@cp -v man/man3/*.3 $(MANDIR)/man3/
 	@echo "   emul man pages installed successfully in $(MANDIR)/man3/."
@@ -78,11 +85,11 @@ install: all
 uninstall:
 	@echo -n "   Performing uninstall..."
 	@rm -f $(LIBDIR)/libemul.{a,so,so.1,so.$(EMULVER)} $(INCLUDEDIR)/emul.h
-	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon
+	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon; rm -f $(BINDIR)/emul_replug
 	@rm -f $(MANDIR)/man3/emul.h.3; rm -f $(MANDIR)/man3/serconfig.3
 	@echo " done."
 
 clean:
 	@echo -n "   Cleaning up..."
-	@rm -rf obj libemul.{a,so,so.$(EMULVER)} sirfmon emul_test emul_test2
+	@rm -rf obj libemul.{a,so,so.$(EMULVER)} sirfmon emul_test emul_test2 emul_replug
 	@echo " done."

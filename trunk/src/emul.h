@@ -73,8 +73,8 @@ int  em_isemate(void);
 int  em_isactive(void);
 /*! \brief Opens the earthmate device and starts thread.
 
-    Must be the first function called before device can be accessed.  Only
-    \a em_debuglevel can be called without opening device first.
+    This must be the first function called before device can be accessed.  Only
+    a few functions can be called without opening the device first.
 
     \return Returns 0 on success, -1 on error.
 */
@@ -84,6 +84,14 @@ int  em_open(void);
     \a em_close should be called when the program has finished communicating with the device.
  */
 void em_close(void);
+/*! \brief Causes reenumeration after device and thread have been stopped.
+
+    After a successful call, a new usb device handle will have been obtained and
+    the thread will start again.  The usual functions may be called once more.
+
+    \return Returns 0 on success, -1 on error.
+ */
+int em_replug(void);
 /*! \brief For use with em_linecontrol function.
 
     When used in conjunction with \a em_linecontrol, this will raise the dtr line on the

@@ -1,3 +1,17 @@
+emul v 1.0.3 (3/02/05)
+	-the sirfmon utility provided with emul is no longer being
+	 synced with gpsd cvs.  gpsd will now install the sirfmon
+	 utility which should also be patched for use with emul.
+	-a new program called emul_replug has been added.  the
+	 program uses the newly added em_replug call to initiate
+	 reenumeration.
+	-em_replug function added to public api.  The function
+	 uses usb_reset() to cause reenumeration and then obtains
+	 a new device handle and starts the thread.
+	-a patch for gpsd 2.20 has been added.
+	-the debug level has been tweaked along with some of the
+	 debug messages and format of messages.
+
 emul v 1.0.2 (3/29/05)
 	-linux: fixed detachment of hid driver from the earthmate
 	 device... should now work properly with kernels less than
