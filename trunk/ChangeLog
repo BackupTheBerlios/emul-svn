@@ -11,6 +11,7 @@ emul v 1.0.3 (3/02/05)
 	-a patch for gpsd 2.20 has been added.
 	-the debug level has been tweaked along with some of the
 	 debug messages and format of messages.
+	-generated new documentation to accommodate changes.
 
 emul v 1.0.2 (3/29/05)
 	-linux: fixed detachment of hid driver from the earthmate
