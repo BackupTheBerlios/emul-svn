@@ -1,8 +1,8 @@
-.TH "/prog/cpp/earthmateusb_userland/src/emul.h" 3 "2 Apr 2005" "Version 1.0.3" "EarthMate Userland Library" \" -*- nroff -*-
+.TH "src/emul.h" 3 "2 Apr 2005" "Version 1.0.3" "EarthMate Userland Library" \" -*- nroff -*-
 .ad l
 .nh
 .SH NAME
-/prog/cpp/earthmateusb_userland/src/emul.h \- Header file for the emul library.  
+src/emul.h \- Header file for the emul library.  
 
 .SH SYNOPSIS
 .br
@@ -106,6 +106,10 @@
 .RI "void \fBem_close\fP (void)"
 .br
 .RI "\fICloses the earthmate device and stops thread. \fP"
+.ti -1c
+.RI "int \fBem_replug\fP (void)"
+.br
+.RI "\fICauses reenumeration after device and thread have been stopped. \fP"
 .ti -1c
 .RI "void \fBem_linecontrol\fP (u_int8_t lines)"
 .br
@@ -330,7 +334,7 @@ Sets the line state for the earthmate device. \fBParameters:\fP
 
 .SS "int em_open (void)"
 .PP
-Opens the earthmate device and starts thread. Must be the first function called before device can be accessed. Only \fIem_debuglevel\fP can be called without opening device first.
+Opens the earthmate device and starts thread. This must be the first function called before device can be accessed. Only a few functions can be called without opening the device first.
 .PP
 \fBReturns:\fP
 .RS 4
@@ -384,6 +388,16 @@ This function is non-blocking.
 \fBReturns:\fP
 .RS 4
 On success the amount of data in read buffer is returned, <0 on error. 
+.RE
+.PP
+
+.SS "int em_replug (void)"
+.PP
+Causes reenumeration after device and thread have been stopped. After a successful call, a new usb device handle will have been obtained and the thread will start again. The usual functions may be called once more.
+.PP
+\fBReturns:\fP
+.RS 4
+Returns 0 on success, -1 on error. 
 .RE
 .PP
 
