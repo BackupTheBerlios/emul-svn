@@ -1,15 +1,17 @@
 	To apply the patch, copy or move the patch into the
-gpsd-2.17 directory.  Go ahead and change the user to root,
+gpsd-<version> directory.  Go ahead and change the user to root,
 as we will soon be installing.  Before issuing the following
-command, please make sure you are also in the gpsd-2.17 directory:
+command, please make sure you are also in the gpsd directory:
 
-$ patch < gpsd-2.17-emul.patch
+$ patch < gpsd-<version>-emul.patch
 
 The patch should apply cleanly... see below if it does not.
 
 Next you will most likely need to run the following two commands:
 
 $ aclocal && automake
+
+(configure on gentoo fails without this):
 $ libtoolize --copy --force
 
 Then run the configure script to set up the daemon however you wish.
