@@ -117,7 +117,7 @@ int em_open() {
 	}
 	/* no device matching vid/pid found */
 	em_device.udev = NULL;
-	return -1;
+	return -ENODEV;
 	
 grab_interface:
 	/* release cypress_m8 module for linux kernel 2.6.10+

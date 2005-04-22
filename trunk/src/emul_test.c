@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <errno.h>
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
@@ -61,8 +62,9 @@ int main(int argc, char *argv[])
 	ret = em_open();
 	
 	if (ret < 0) {
-		fprintf(stderr, "Failed to open device, check usbfs permissions.\n"
-				 "return code = %d\n", ret);
+		errno = -ret;
+		perror("\tem_open");
+		fprintf(stderr, "\tCheck node permissions and device attachment.\n");
 		exit(EXIT_FAILURE);
 	} else
 		fprintf(stdout, "Device successfuly opened.\n");
