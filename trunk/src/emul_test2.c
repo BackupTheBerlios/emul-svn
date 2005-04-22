@@ -71,7 +71,7 @@ int main(void)
 			read(0, buf, count);
 			for (x = 0; x < count; x++)
 				printf("%c", buf[x]);
-			if (count == 4 && strncmp(buf, "exit", 4) == 0)
+			if (count == 4 && strncmp((char *)buf, "exit", 4) == 0)
 				break;
 		}
 		
