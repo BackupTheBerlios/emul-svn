@@ -1,16 +1,13 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="3" >
+ <DocsAndViews NumberOfDocuments="2" >
   <Doc0 NumberOfViews="1" URL="file:///prog/cpp/emul/trunk/ChangeLog" >
-   <View0 line="6" Type="Source" />
+   <View0 Type="Source" />
   </Doc0>
   <Doc1 NumberOfViews="1" URL="file:///prog/cpp/emul/trunk/src/emul.c" >
-   <View0 line="739" Type="Source" />
+   <View0 line="54" Type="Source" />
   </Doc1>
-  <Doc2 NumberOfViews="1" URL="file:///prog/cpp/gpsd-2.20-emul.patch" >
-   <View0 line="706" Type="Source" />
-  </Doc2>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>

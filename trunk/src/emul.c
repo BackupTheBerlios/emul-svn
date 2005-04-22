@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <usb.h>
+#include <errno.h>
 #include <pthread.h>
 #include <termios.h>
 #include <sys/time.h>
@@ -70,15 +71,8 @@ static int em_debug = 0;
 static int DEVICE_TYPE = NORMAL;
 
 
-void em_devtype(int type)
-{
-	DEVICE_TYPE = type;
-}
-
-int em_isemate(void)
-{
-	return DEVICE_TYPE;
-}
+/* Start of api implementation
+ */
 
 int em_isactive()
 {
@@ -104,11 +98,6 @@ int em_open() {
 	
 	busses = usb_get_busses();
 	
-	/* TODO: Look into using usb_reset, which would require searching
-	 *       twice.  Once to reset device, and again to open the device.
-	 *       This will undoubtedly cause device to reset with original
-	 *       settings but might solve some problems with -113 error.
-	 */
 	for (bus = busses; bus; bus = bus->next) {
 		struct usb_device *dev;
 		for (dev = bus->devices; dev; dev = dev->next) {
@@ -155,9 +144,9 @@ grab_interface:
 	
 	usb_set_configuration(em_device.udev, 1);
 	/* clear halts */
-	usb_resetep(em_device.udev, 0x81);
-	usb_resetep(em_device.udev, 0x02);
-	usb_resetep(em_device.udev, 0x00);
+	usb_clear_halt(em_device.udev, 0x81);
+	usb_clear_halt(em_device.udev, 0x02);
+	usb_clear_halt(em_device.udev, 0x00);
 	
 	/* allocate read/write buffers */
 	read_buffer = (struct buf *)buf_alloc(EM_MAX_READ);
@@ -236,7 +225,7 @@ int em_serconfig_set(struct serconfig *sconfig)
 	u_int8_t feature_buffer[5];
 	u_int8_t config = 0;
 	int databits, stopbits;
-	int ret;
+	int ret, tries = 0;
 	
 	if (!(em_device.udev && sconfig))
 		return -1;
@@ -252,28 +241,46 @@ int em_serconfig_set(struct serconfig *sconfig)
 	config |= (stopbits << 3); /* 0 - 1 stop bit, 1 - 2 stop bits */
 	config |= sconfig->parity;
 	feature_buffer[4] = config;
-	
-	ret = usb_control_msg(em_device.udev, USB_ENDPOINT_OUT | USB_RECIP_INTERFACE |
-								 USB_TYPE_CLASS, HID_REQ_SET_REPORT, 0x0300, 0,
-								 (char *)feature_buffer, 5, CONTROL_TIMEOUT);
+
+	do {
+		ret = usb_control_msg(em_device.udev, USB_ENDPOINT_OUT | USB_RECIP_INTERFACE |
+						      USB_TYPE_CLASS, HID_REQ_SET_REPORT, 0x0300, 0,
+						      (char *)feature_buffer, 5, CONTROL_TIMEOUT);
+		if (tries++ >= 3)
+			break;
+		
+		if (ret == EPIPE)
+			usb_clear_halt(em_device.udev, 0x00);
+	} while (ret != 5 && ret != ENODEV);
+
 	if (ret != 5)
 		return ret;
-	else
-		return 0;
+
+	return 0;
 }
 
 int em_serconfig_get(struct serconfig *sconfig)
 {
 	u_int8_t feature_buffer[5];
-	int ret;
+	int ret, tries = 0;
 	
 	if (!(em_device.udev && sconfig))
 		return -1;
 	
 	memset(feature_buffer, 0x0, 5);
-	ret = usb_control_msg(em_device.udev, USB_ENDPOINT_IN | USB_RECIP_INTERFACE |
-								 USB_TYPE_CLASS, HID_REQ_GET_REPORT, 0x0300, 0,
-								 (char *)feature_buffer, 5, CONTROL_TIMEOUT);
+
+	do {
+		ret = usb_control_msg(em_device.udev, USB_ENDPOINT_IN | USB_RECIP_INTERFACE |
+						      USB_TYPE_CLASS, HID_REQ_GET_REPORT, 0x0300, 0,
+						      (char *)feature_buffer, 5, CONTROL_TIMEOUT);
+		
+		if (tries++ >=3)
+			break;
+		
+		if (ret == EPIPE)
+			usb_clear_halt(em_device.udev, 0x00);
+	} while (ret != 5 && ret != ENODEV);
+
 	if (ret != 5) {
 		sconfig = NULL;
 		return ret;
@@ -306,6 +313,7 @@ int em_raw_read(u_int8_t buffer[])
 		return -1;
 	
 	memset(tbuf, 0x0, 32);
+	
 	ret = usb_interrupt_read(em_device.udev, 0x81, (char *)tbuf, 32, 100);
 	
 	if (ret < 0)
@@ -401,8 +409,7 @@ void em_change_state(int state)
 	}
 }
 
-/* the read/write handling thread - to get around libusb's
- * thread incompatibility with read/write urb transfers.
+/* the read/write/control handling thread
  */
 void *rw_thread(void *arg) {
 	u_int8_t buffer[MAX_READ_WRITE], wbuffer[30];
@@ -686,6 +693,18 @@ int em_write_data_avail()
 void em_debuglevel(int mode)
 {
 	em_debug = mode;
+}
+
+/*** Utility functions ***/
+
+void em_devtype(int type)
+{
+	DEVICE_TYPE = type;
+}
+
+int em_isemate(void)
+{
+	return DEVICE_TYPE;
 }
 
 ssize_t READ(int fd, void *buf, size_t count)

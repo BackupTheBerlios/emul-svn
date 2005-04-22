@@ -38,23 +38,80 @@ man keywords are 'emul.h' and 'serconfig'.
 stories/etc, please do.  Visit the project page at:
 http://developer.berlios.de/projects/emul/
 
+
+
 My tests and trials (amd athlon 1500/256MB ddr266/ehci-ohci-uhci):
 
+2.4 linux kernel notice:
+
+	Host controllers that are usb 2.0 compatible bundled with ohci bridges for
+usb 1.1 gave me some trouble.  For instance, trying to read from the interrupt
+in pipe will return -22 (or EINVAL) for whichever reason.  This problem does not
+seem to exist on the 2.5/2.6 kernels.  A quick and dirty solution is to connect
+a usb 1.1 hub on one of the controllers port hubs and then plug the earthmate
+into that.  I'm not sure if this is the same for ehci/uhci controllers as
+well... I surely hope not.  For people with plain jane usb 1.1 busses there
+should be no problem.
+
+RedHat Linux 9.0 (gcc version 3.2.2 20030222 (Red Hat Linux 3.2.2-5) kernel
+2.4.20-8)
+	Before compiling, I had to change MANDIR to 'MANDIR=$(PREFIX)/share/man'. 
+Otherwise it compiled cleanly.  The version of libusb that comes default with
+rh9 is 0.1.6, which does not contain the necessary functions for interrupt
+transactions.  I had to first package a new rpm of libusb-0.1.10a and then force
+it to install using the --force flag.  I also grabbed the latest usbutils and
+repacked that as well (for lsusb tool).  On the first run, the system completely
+locked up. Apparently when connected to the uhci usb bus the system would oops. 
+I then tried upgrading the kernel to something a little more recent from
+kernel.org. With 2.4.22/2.4.24/2.4.30 no lockups occured.  sirfmon, both the
+version packaged with the library and the one accompanying gpsd, worked well. 
+The library utilites, such as emul_test, did not however.  I also ran gpsd-2.21
+with success.
+
 Gentoo Linux 2004.3 (gcc 3.4.3 / kernel 2.6.11):
-	Compiled without trouble.  It just works, but then again I'm developing emul on this platform.
+	Compiled without trouble.  It just works, but then again I'm developing emul
+on this platform.
 
 Slackware 10.1 (gcc 3.3.4 / kernel 2.4.29):
-	Compiled without trouble.  The sirfmon utility works fairly well at rates below or at 9600bps.  Anything higher will start
+	Compiled without trouble.  The sirfmon utility works fairly well at rates
+below or at 9600bps.  Anything higher will start
 choking the emul applications, including gpsd.
 
 OpenDarwin 7.2.1 (gcc 3.3):
-	Compiled without trouble.  The only usb controller which seemed to work was an Ali based ehci/ohci controller, and even then only one of the two ports worked.  I'm sure someone with ppc hardware could easily have this working.  When running the test applications, usb_interrupt_read seemed to fail every time.  Someone running Mac OS X 10.3.8 will most likely have this running smoothly.
+	Compiled without trouble.  The only usb controller which seemed to work was
+an Ali based ehci/ohci controller, and even then only one of the two ports
+worked.  I'm sure someone with ppc hardware could easily have this working. 
+When running the test applications, usb_interrupt_read seemed to fail every
+time.  Someone running Mac OS X 10.3.8 will most likely have this running
+smoothly.
 
 Mac OS X:
-	I'm guessing this library will work based on what happened with OpenDarwin.  Someone please send a report.
+	I'm guessing this library will work based on what happened with OpenDarwin. 
+Since most if not all macs use ohci host controllers, perhaps the usb 1.1 hub
+trick will work as mentioned above.  Someone please send a report.
+
+BSD Folks:
+	BSD support is coming along slowly.
 
 NetBSD 2.0 (gcc 3.3.3):
-	Compiled without trouble.  In order to avoid using userconf manually on every boot to disable uhid/uhidev, the uhid interface needs to be disabled in the kernel by recompiling it.  This is of course very inconvenient for someone with usb mice, etc.  With userconf, at boot I had to issue the command 'boot -c' in order to get into the userconf dialog.  Then, to disable the hid interface, issue the commands: disable 349 and disable 350.  The emul_test program works fine, however the lines never drop... that is something that should be fixed.  The em_select() function seems to be at blame for why sirfmon and emul_test2 fail to work properly.  Needless to say, emul is borked for now with bsd in general
+	Compiled without trouble.  In order to avoid using userconf manually on every
+boot to disable uhid/uhidev, the uhid interface needs to be disabled in the
+kernel by recompiling it.  This is of course very inconvenient for someone with
+usb mice, etc.  With userconf, at boot I had to issue the command 'boot -c' in
+order to get into the userconf dialog.  Then, to disable the hid interface,
+issue the commands: disable 349 and disable 350.  The emul_test program works
+fine, however the lines never drop... that is something that should be fixed. 
+The em_select() function seems to be at blame for why sirfmon and emul_test2
+fail to work properly.
 
 FreeBSD:
-	Avoid this library... use the ucycom module instead.  The node created by ucycom should be used with gpsd.
+	Avoid this library... use the ucycom module instead.  Someone, namely
+'brick', has reported the module working fine with the earthmate on FreeBSD
+6.0-CURRENT.  The node created by ucycom should be used with gpsd.  If you
+however would want to still use this library... who am I to stop you!  Something
+to look into for disabling ucycom/uhid without obtaining a migraine would be
+this:
+
+http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/device-hints.html
+
+Good Luck!
