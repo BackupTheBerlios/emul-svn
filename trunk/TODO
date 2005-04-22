@@ -2,8 +2,8 @@
 	-make the emul code conditional.  that is, only build the
 	 code if emul has been detected or user has requested it
 	 with configure.  this is to get ready for merging with
-	 the main gpsd branch.  also look for ways to simply the
-	 code and make it as non-obtrusive as possible.
+	 the main gpsd branch.  also look for more ways to simply
+	 the code and make it as non-obtrusive as possible.
 
 -emul library:
 	-compile and run test the library on a larger variety

@@ -6,7 +6,7 @@ libusb >= 0.1.8
 
 	The library has moved away from automake and friends.  For your target
 install, please link the appropriate makefile.  For example, someone doing
-and install with Mac OS X or OpenDarwin should issue the command:
+an install with Mac OS X or OpenDarwin should issue the command:
 	$ln -s Makefile.darwin Makefile
 
 	To install, please take a look at the Makefile and make sure the
@@ -40,7 +40,11 @@ http://developer.berlios.de/projects/emul/
 
 
 
-My tests and trials (amd athlon 1500/256MB ddr266/ehci-ohci-uhci):
+My tests and trials:
+
+		Machines tested with library:
+	amd athlon 1500/256MB ddr266/ehci-ohci-uhci
+	abit bh6 p3 667/256MB PC133/ali ehci-ohci, uhci bus onboard
 
 2.4 linux kernel notice:
 

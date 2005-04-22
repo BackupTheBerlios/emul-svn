@@ -153,16 +153,22 @@ grab_interface:
 	write_buffer = (struct buf *)buf_alloc(EM_MAX_WRITE);
 	
 	ret = pthread_mutex_init(&read_buffer->buf_mutex, NULL);
-	if (ret != 0)
+	if (ret != 0) {
+		fprintf(stderr, "em_open: failed to init read buffer lock\n");
 		exit(EXIT_FAILURE);
+	}
 	
 	ret = pthread_mutex_init(&write_buffer->buf_mutex, NULL);
-	if (ret != 0)
+	if (ret != 0) {
+		fprintf(stderr, "em_open: failed to init write buffer lock\n");
 		exit(EXIT_FAILURE);
+	}
 	
 	ret = pthread_create(&rwthread, NULL, rw_thread, NULL);
-	if (ret != 0)
+	if (ret != 0) {
+		fprintf(stderr, "em_open: failed to create read/write thread\n");
 		exit(EXIT_FAILURE);
+	}
 	
 	sleep(1);
 	return 0;
