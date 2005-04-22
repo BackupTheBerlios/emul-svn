@@ -45,14 +45,14 @@ emul_test: dirs emul.so
 	@echo "   Compiling emul_test..."
 	@# make sure symlink is in place
 	@ln -sf libemul.so.$(EMULVER) libemul.so
-	@$(CC) $(CFLAGS) -D_REENTRANT -I./src -c src/emul_test.c -o obj/emul_test.o
+	@$(CC) $(CFLAGS) -I./src -c src/emul_test.c -o obj/emul_test.o
 	@$(CC) -L. -lemul obj/emul_test.o -o emul_test
 
 emul_test2: dirs emul.so
 	@echo "   Compiling emul_test2..."
 	@# make sure symlink is in place
 	@ln -sf libemul.so.$(EMULVER) libemul.so
-	@$(CC) $(CFLAGS) -D_REENTRANT -I./src -c src/emul_test2.c -o obj/emul_test2.o
+	@$(CC) $(CFLAGS) -I./src -c src/emul_test2.c -o obj/emul_test2.o
 	@$(CC) -L. -lemul obj/emul_test2.o -o emul_test2
 
 emul_replug: dirs emul.so
