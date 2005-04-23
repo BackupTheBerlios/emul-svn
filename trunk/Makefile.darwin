@@ -14,9 +14,9 @@ INCLUDEDIR=$(PREFIX)/include
 MANDIR=$(PREFIX)/man
 
 CFLAGS=-Wall -Werror -pedantic
-EMULVER=1.0.4
+EMULVER=1.0.5
 
-all: dirs emul.dylib emul.la sirfmon emul_test emul_test2 emul_replug
+all: dirs emul.dylib emul.la sirfmon emul_test
 
 emul.dylib: dirs
 	@echo "   Compiling shared library..."
@@ -47,20 +47,6 @@ emul_test: dirs emul.dylib
 	@$(CC) -I./src -c src/emul_test.c -o obj/emul_test.o
 	@$(CC) -L. -lemul obj/emul_test.o -o emul_test
 
-emul_test2: dirs emul.dylib
-	@echo "   Compiling emul_test2..."
-	@# make sure symlink is in place
-	@ln -sf libemul-$(EMULVER).dylib libemul.dylib
-	@$(CC) -I./src -c src/emul_test2.c -o obj/emul_test2.o
-	@$(CC) -L. -lemul obj/emul_test2.o -o emul_test2
-
-emul_replug: dirs emul.dylib
-	@echo "   Compiling emul_replug..."
-	@# make sure symlink is in place
-	@ln -sf libemul-$(EMULVER).dylib libemul.dylib
-	@$(CC) -I./src -c src/emul_replug.c -o obj/emul_replug.o
-	@$(CC) -L. -lemul obj/emul_replug.o -o emul_replug
-
 dirs:
 	mkdir -p obj
 
@@ -75,7 +61,7 @@ install: all
 		echo "   Installing static library into $(LIBDIR)/ - (libemul.a)"; \
 		cp libemul.a $(LIBDIR)/; fi
 	@echo "   emul library v$(EMULVER) installed successfully in $(LIBDIR)."
-	@cp -v sirfmon emul_test emul_replug $(BINDIR)/
+	@cp -v sirfmon emul_test $(BINDIR)/
 	@echo "   emul programs installed successfully in $(BINDIR)."
 	@if test ! -e $(MANDIR)/man3; then \
 		mkdir -p $(MANDIR)/man3; fi
@@ -91,7 +77,7 @@ uninstall:
 	@echo -n "   Performing uninstall..."
 	@rm -f $(LIBDIR)/libemul.a $(LIBDIR)/libemul.dylib $(LIBDIR)/libemul-$(EMULVER).dylib \
 	$(INCLUDEDIR)/emul.h
-	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon; rm -f $(BINDIR)/emul_replug
+	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon
 	@rm -f $(MANDIR)/man3/emul.h.3; rm -f $(MANDIR)/man3/serconfig.3
 	@rm -rf /System/Library/Extensions/EMUL.kext
 	@echo " done."
@@ -99,5 +85,5 @@ uninstall:
 clean:
 	@echo -n "   Cleaning up..."
 	@rm -rf obj libemul.a libemul.dylib libemul-$(EMULVER).dylib \
-	sirfmon emul_test emul_test2 emul_replug
+	sirfmon emul_test
 	@echo " done."

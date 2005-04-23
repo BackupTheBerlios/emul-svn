@@ -16,13 +16,13 @@ INCLUDEDIR=$(PREFIX)/include
 MANDIR=$(PREFIX)/man
 
 CFLAGS=-Wall -Werror -pedantic
-EMULVER=1.0.4
+EMULVER=1.0.5
 
-all: config emul.so emul.la sirfmon emul_test emul_test2 emul_replug
+all: config emul.so emul.la sirfmon emul_test
 
 config: # this is rather presumptuos - change if it gives you trouble.
 	@if test -e $(INCLUDEDIR)/sys/filio.h; then \
-	@echo "#define HAVE_SYS_FILIO" >> config.h; fi
+	@echo "#define HAVE_SYS_FILIO" > config.h; fi
 
 emul.so:
 	@echo "   Compiling shared library..."
@@ -64,7 +64,7 @@ install: all
 		echo "   Installing static library into $(LIBDIR)/ - (libemul.a)"; \
 		cp libemul.a $(LIBDIR)/; fi
 	@echo "   emul library v$(EMULVER) installed successfully in $(LIBDIR)."
-	@cp -v sirfmon emul_test emul_replug $(BINDIR)/
+	@cp -v sirfmon emul_test $(BINDIR)/
 	@echo "   emul programs installed successfully in $(BINDIR)."
 	@if test ! -e $(MANDIR)/man3; then \
 		mkdir -p $(MANDIR)/man3; fi
@@ -76,12 +76,12 @@ uninstall:
 	@echo -n "   Performing uninstall..."
 	@rm -f $(LIBDIR)/libemul.a $(LIBDIR)/libemul.so $(LIBDIR)/libemul.so.1 \
 	$(LIBDIR)/libemul.so.$(EMULVER) $(INCLUDEDIR)/emul.h
-	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon; rm -f $(BINDIR)/emul_replug
+	@rm -f $(BINDIR)/emul_test; rm -f $(BINDIR)/sirfmon
 	@rm -f $(MANDIR)/man3/emul.h.3; rm -f $(MANDIR)/man3/serconfig.3
 	@echo " done."
 
 clean:
 	@echo -n "   Cleaning up..."
 	@rm -f *.o libemul.a libemul.so libemul.so.1 libemul.so.$(EMULVER) \
-	sirfmon emul_test emul_test2 emul_replug
+	sirfmon emul_test
 	@echo " done."
