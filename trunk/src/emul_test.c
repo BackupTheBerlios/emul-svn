@@ -2,8 +2,9 @@
  *   Copyright (C) 2005 by Lonnie Mendez                                   *
  *   lmendez19@austin.rr.com                                               *
  *                                                                         *
- *   earthmateusb_userland: Portable user land library providing access to *
- *                          earthmate usb device via libusb.               *
+ *   emul_test: shows how to use the library and tests device.             *
+ *                The program will output data from both standard in       *
+ *                and the earthmate device.                                *
  *                                                                         *
  *   TODO: sort out header files for portability.                          *
  *                                                                         *
@@ -29,12 +30,15 @@
 #include <ctype.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/ioctl.h>
 #ifdef HAVE_SYS_FILIO
 #include <sys/filio.h>
 #endif
 #include <unistd.h>
 #include <string.h>
 #include <emul.h>
+
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 
 static int quit = 0;
@@ -47,9 +51,9 @@ void handlesig(int sig)
 
 int main(int argc, char *argv[])
 {
-	struct serconfig sconfig, test;
+	struct serconfig sconfig1, sconfig2;
 	fd_set selectset, tset;
-	int ret, debuglevel;
+	int ret, debuglevel, x, count;
 	u_int8_t buf[1024];
 	
 	if (argc > 1 && argv[1][0] == 'd') {
@@ -58,14 +62,13 @@ int main(int argc, char *argv[])
 	}
 	
 	(void) signal(SIGINT, handlesig);
-	
-	sconfig.baudrate = 4800;
-	sconfig.databits = 8;
-	sconfig.stopbits = 1;
-	sconfig.parity = PAR_NONE;
+
+	sconfig1.baudrate = 4800;
+	sconfig1.databits = 8;
+	sconfig1.stopbits = 1;
+	sconfig1.parity = PAR_NONE;
 	
 	ret = em_open();
-	
 	if (ret < 0) {
 		errno = -ret;
 		perror("\tem_open");
@@ -73,10 +76,14 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	} else
 		fprintf(stdout, "Device successfuly opened.\n");
-	
-	ret = em_serconfig_set(&sconfig);
+
+	/* NOTE: you don't have to issue em_linecontrol at first start... em_serconfig_set
+		is enough to begin receiving data, but it doesn't hurt either.
+	 */
+	ret = em_serconfig_set(&sconfig1);
 	if (ret < 0)
 		fprintf(stderr, "Failed setting new serial config\n");
+
 	em_linecontrol(CONTROL_DTR | CONTROL_RTS);
 	
 	FD_ZERO(&selectset);
@@ -92,7 +99,7 @@ int main(int argc, char *argv[])
 		
 		if (FD_ISSET(0, &tset)) {
 			ioctl(0, FIONREAD, &count);
-			count = min(count, 1024);
+			count = MIN(count, 1024);
 			read(0, buf, count);
 			for (x = 0; x < count; x++)
 				fprintf(stdout, "%c", buf[x]);
@@ -106,21 +113,21 @@ int main(int argc, char *argv[])
 	}
 	em_linecontrol(CONTROL_DROP);
 	
-	fprintf(stdout, "\n\n%d byte(s) left in read buffer.", em_read_data_avail());
+	fprintf(stdout, "\n\n%d byte(s) left in read buffer.\n", em_read_data_avail());
 	
-	ret = em_serconfig_get(&test);
+	ret = em_serconfig_get(&sconfig2);
 	if (ret < 0)
 		fprintf(stderr, "Failed to retrieve serial config - ret = %d\n", ret);
 	else {
 		fprintf(stdout, "Device reports:\n");
-		fprintf(stdout, "Baudrate: %ld\n", test.baudrate);
-		fprintf(stdout, "Databits: %d\n", test.databits);
-		fprintf(stdout, "Stopbits: %d\n", test.stopbits);
+		fprintf(stdout, "Baudrate: %ld\n", sconfig2.baudrate);
+		fprintf(stdout, "Databits: %d\n", sconfig2.databits);
+		fprintf(stdout, "Stopbits: %d\n", sconfig2.stopbits);
 		fprintf(stdout, "Parity: ");
-		if (test.parity == PAR_NONE)
+		if (sconfig2.parity == PAR_NONE)
 			fprintf(stdout, "none");
 		else
-			if (test.parity == PAR_ODD)
+			if (sconfig2.parity == PAR_ODD)
 				fprintf(stdout, "odd");
 			else
 				fprintf(stdout, "even");
