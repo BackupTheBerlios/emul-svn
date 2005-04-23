@@ -20,7 +20,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -134,6 +134,7 @@ grab_interface:
 	}
 	#endif
 	
+	usb_set_configuration(em_device.udev, 1);
 	ret = usb_claim_interface(em_device.udev, 0);
 	if (ret < 0) {
 		if (em_debug) fprintf(stderr, "em_open: failed to claim device\n");
@@ -142,11 +143,9 @@ grab_interface:
 		return ret;
 	}
 	
-	usb_set_configuration(em_device.udev, 1);
 	/* clear halts */
 	usb_clear_halt(em_device.udev, 0x81);
 	usb_clear_halt(em_device.udev, 0x02);
-	usb_clear_halt(em_device.udev, 0x00);
 	
 	/* allocate read/write buffers */
 	read_buffer = (struct buf *)buf_alloc(EM_MAX_READ);

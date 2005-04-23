@@ -22,13 +22,16 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
- 
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <errno.h>
 #include <signal.h>
+#ifdef HAVE_SYS_FILIO
+#include <sys/filio.h>
+#endif
 #include <unistd.h>
 #include <string.h>
 #include <emul.h>
@@ -36,14 +39,18 @@
 
 static int quit = 0;
 
-void handlesig(int sig);
+void handlesig(int sig)
+{
+	quit = 1;
+}
 
 
 int main(int argc, char *argv[])
 {
 	struct serconfig sconfig, test;
-	u_int8_t byte = 0x0;
+	fd_set selectset, tset;
 	int ret, debuglevel;
+	u_int8_t buf[1024];
 	
 	if (argc > 1 && argv[1][0] == 'd') {
 		sscanf(argv[1], "d%d", &debuglevel);
@@ -51,8 +58,6 @@ int main(int argc, char *argv[])
 	}
 	
 	(void) signal(SIGINT, handlesig);
-	
-	em_devtype(EMATE);
 	
 	sconfig.baudrate = 4800;
 	sconfig.databits = 8;
@@ -74,15 +79,34 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Failed setting new serial config\n");
 	em_linecontrol(CONTROL_DTR | CONTROL_RTS);
 	
-	sleep(2);
+	FD_ZERO(&selectset);
+	FD_SET(0, &selectset);
 	
 	while (!quit) {
-		ret = em_read(&byte, 1);
-		if (ret > 0)
-			fprintf(stdout, "%c", byte);
-		usleep(100);
+		tset = selectset;
+		
+		if (em_select(1, &tset, NULL, NULL, NULL)<0) {
+			perror("select");
+			break;
+		}
+		
+		if (FD_ISSET(0, &tset)) {
+			ioctl(0, FIONREAD, &count);
+			count = min(count, 1024);
+			read(0, buf, count);
+			for (x = 0; x < count; x++)
+				fprintf(stdout, "%c", buf[x]);
+		}
+		
+		if ((count = em_read_data_avail())) {
+			em_read(buf, count);
+			for (x = 0; x < count; x++)
+				fprintf(stdout, "%c", buf[x]);
+		}
 	}
-	fprintf(stdout, "\n");
+	em_linecontrol(CONTROL_DROP);
+	
+	fprintf(stdout, "\n\n%d byte(s) left in read buffer.", em_read_data_avail());
 	
 	ret = em_serconfig_get(&test);
 	if (ret < 0)
@@ -102,13 +126,8 @@ int main(int argc, char *argv[])
 				fprintf(stdout, "even");
 		fprintf(stdout, "\n");
 	}
-	em_linecontrol(CONTROL_DROP);
-	em_close();
 	
+	em_close();
 	return 0;
 }
 
-void handlesig(int sig)
-{
-	quit = 1;
-}

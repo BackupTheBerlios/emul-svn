@@ -18,7 +18,11 @@ MANDIR=$(PREFIX)/man
 CFLAGS=-Wall -Werror -pedantic
 EMULVER=1.0.4
 
-all: emul.so emul.la sirfmon emul_test emul_test2 emul_replug
+all: config emul.so emul.la sirfmon emul_test emul_test2 emul_replug
+
+config: # this is rather presumptuos - change if it gives you trouble.
+	@if test -e $(INCLUDEDIR)/sys/filio.h; then \
+	@echo "#define HAVE_SYS_FILIO" >> config.h; fi
 
 emul.so:
 	@echo "   Compiling shared library..."
@@ -47,20 +51,6 @@ emul_test: emul.so
 	@ln -sf libemul.so.$(EMULVER) libemul.so
 	@$(CC) -I./src -c src/emul_test.c -o emul_test.o
 	@$(CC) -L. -lemul emul_test.o -o emul_test
-
-emul_test2: emul.so
-	@echo "   Compiling emul_test2..."
-	@# make sure symlink is in place
-	@ln -sf libemul.so.$(EMULVER) libemul.so
-	@$(CC) -I./src -c src/emul_test2.c -o emul_test2.o
-	@$(CC) -L. -lemul emul_test2.o -o emul_test2
-
-emul_replug: emul.so
-	@echo "   Compiling emul_replug..."
-	@# make sure symlink is in place
-	@ln -sf libemul.so.$(EMULVER) libemul.so
-	@$(CC) -I./src -c src/emul_replug.c -o emul_replug.o
-	@$(CC) -L. -lemul emul_replug.o -o emul_replug
 
 install: all
 	@echo "   Installing emul.h into $(INCLUDEDIR)"
