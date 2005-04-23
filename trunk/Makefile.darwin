@@ -70,7 +70,7 @@ install: all
 	@if test -e "libemul-$(EMULVER).dylib"; then \
 		echo "   Installing shared library into $(LIBDIR)/ - (libemul-$(EMULVER).dylib)"; \
 		cp libemul-$(EMULVER).dylib $(LIBDIR)/; \
-		ln -sf $(LIBDIR)/libemul-$(EMULVER).dylib $(LIBDIR)/libemul.dylib
+		ln -sf $(LIBDIR)/libemul-$(EMULVER).dylib $(LIBDIR)/libemul.dylib; fi
 	@if test -e libemul.a; then \
 		echo "   Installing static library into $(LIBDIR)/ - (libemul.a)"; \
 		cp libemul.a $(LIBDIR)/; fi
