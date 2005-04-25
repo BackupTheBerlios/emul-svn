@@ -1,3 +1,10 @@
+emul v 1.0.5 (4/23/05)
+	-merged emul_test2 into emul_test.  it now works flawlessly
+	 on most systems.
+	-corrected bug which prevented the library from opening
+	 the device correctly on opendarwin/MacOS X.
+	-updated readme document
+
 emul v 1.0.4 (4/22/05)
 	-fixed a bug where setting/retrieving serial configuration
 	 would sometimes fail with -EPIPE.
