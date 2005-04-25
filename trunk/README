@@ -24,6 +24,9 @@ mode is to physically replug it.  There is also the excellent utility
 library via the command:
 $ sirfmon emate     (it also works with regular tty devices)
 
+	`export LD_LIBRARY_PATH=.` should be set if you want to run the test
+applications from source directory without installing.
+
 	You can switch the unit between sirf and nmea with the sirfmon utility.
 By default, the unit is switched into sirf mode when starting sirfmon.  To
 go back to nmea, simply enter 'n' at the command line.
