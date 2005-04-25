@@ -9,43 +9,43 @@
 
 
 CC=gcc
-PREFIX=/usr
+PREFIX=EPREFIX
 LIBDIR=$(PREFIX)/lib
 BINDIR=$(PREFIX)/bin
 INCLUDEDIR=$(PREFIX)/include
 MANDIR=$(PREFIX)/man
 
 CFLAGS=-Wall -Werror -pedantic
-EMULVER=1.0.5
+EMULVER=VERSION
 
-all: config emul.so emul.la sirfmon emul_test
+all: config BUILD_SHARED BUILD_STATIC sirfmon emul_test
 
 config: # this is rather presumptuos - change if it gives you trouble.
 	@if test -e $(INCLUDEDIR)/sys/filio.h; then \
 	@echo "#define HAVE_SYS_FILIO" > config.h; fi
 
-emul.so:
+emul_shared:
 	@echo "   Compiling shared library..."
 	@$(CC) $(CFLAGS) -D_REENTRANT -fPIC -c src/emul.c -o emul_shr.o
 	@$(CC) $(CFLAGS) -D_REENTRANT -fPIC -c src/buf.c -o buf_shr.o
 	@$(CC) $(LDFLAGS) -shared -fPIC -Wl,-soname,libemul.so.1 \
 	-o libemul.so.$(EMULVER) emul_shr.o buf_shr.o -lusb -pthread
 
-emul.la:
+emul_static:
 	@echo "   Compiling static library..."
 	@$(CC) $(CFLAGS) -c src/emul.c -o emul_sic.o
 	@$(CC) $(CFLAGS) -c src/buf.c -o buf_sic.o
 	@ar rc libemul.a emul_sic.o buf_sic.o
 	@ranlib libemul.a
 
-sirfmon: emul.so
+sirfmon: emul_shared
 	@echo "   Compiling sirfmon..."
 	@# make sure symlink is in place
 	@ln -sf libemul.so.$(EMULVER) libemul.so
 	@$(CC) -I./src -c src/sirfmon.c -o sirfmon.o
 	@$(CC) -L. -lemul -lcurses -lm sirfmon.o -o sirfmon
 
-emul_test: emul.so
+emul_test: emul_shared
 	@echo "   Compiling emul_test..."
 	@# make sure symlink is in place
 	@ln -sf libemul.so.$(EMULVER) libemul.so
@@ -66,11 +66,14 @@ install: all
 	@echo "   emul library v$(EMULVER) installed successfully in $(LIBDIR)."
 	@cp -v sirfmon emul_test $(BINDIR)/
 	@echo "   emul programs installed successfully in $(BINDIR)."
-	@if test ! -e $(MANDIR)/man3; then \
-		mkdir -p $(MANDIR)/man3; fi
-	@cp -v man/man3/serconfig.3 $(MANDIR)/man3/
-	@cp -v man/man3/emul.h.3 $(MANDIR)/man3/
-	@echo "   emul man pages installed successfully in $(MANDIR)/man3/."
+	@if test -e $(MANDIR); then \
+		@if test ! -e $(MANDIR)/man3; then \
+			mkdir -p $(MANDIR)/man3; fi
+		@cp -v man/man3/serconfig.3 $(MANDIR)/man3/
+		@cp -v man/man3/emul.h.3 $(MANDIR)/man3/
+		@echo "   emul man pages installed successfully in $(MANDIR)/man3/."
+	else
+		@echo "man directory not found,  documentation not installed."; fi
 
 uninstall:
 	@echo -n "   Performing uninstall..."

@@ -9,39 +9,39 @@
 
 
 CC=gcc
-PREFIX=/usr
+PREFIX=EPREFIX
 LIBDIR=$(PREFIX)/lib
 BINDIR=$(PREFIX)/bin
 INCLUDEDIR=$(PREFIX)/include
 MANDIR=$(PREFIX)/man
 
 CFLAGS=-Wall -Werror -pedantic
-EMULVER=1.0.5
+EMULVER=VERSION
 
-all: dirs emul.so emul.la sirfmon emul_test
+all: dirs BUILD_SHARED BUILD_STATIC sirfmon emul_test
 
-emul.so: dirs
+emul_shared: dirs
 	@echo "   Compiling shared library..."
 	@$(CC) $(CFLAGS) -D_REENTRANT -fPIC -c src/emul.c -o obj/emul_shr.o
 	@$(CC) $(CFLAGS) -D_REENTRANT -fPIC -c src/buf.c -o obj/buf_shr.o
 	@$(CC) $(LDFLAGS) -shared -fPIC -Wl,-soname,libemul.so.1 \
 	-o libemul.so.$(EMULVER) obj/emul_shr.o obj/buf_shr.o -lusb -pthread
 
-emul.la: dirs
+emul_static: dirs
 	@echo "   Compiling static library..."
 	@$(CC) $(CFLAGS) -c src/emul.c -o obj/emul_sic.o
 	@$(CC) $(CFLAGS) -c src/buf.c -o obj/buf_sic.o
 	@ar rc libemul.a obj/emul_sic.o obj/buf_sic.o
 	@ranlib libemul.a
 
-sirfmon: dirs emul.so
+sirfmon: dirs emul_shared
 	@echo "   Compiling sirfmon..."
 	@# make sure symlink is in place
 	@ln -sf libemul.so.$(EMULVER) libemul.so
 	@$(CC) -I./src -c src/sirfmon.c -o obj/sirfmon.o
 	@$(CC) -L. -lemul -lcurses -lm obj/sirfmon.o -o sirfmon
 
-emul_test: dirs emul.so
+emul_test: dirs emul_shared
 	@echo "   Compiling emul_test..."
 	@# make sure symlink is in place
 	@ln -sf libemul.so.$(EMULVER) libemul.so
@@ -49,7 +49,7 @@ emul_test: dirs emul.so
 	@$(CC) -L. -lemul obj/emul_test.o -o emul_test
 
 dirs:
-	mkdir -p ./obj
+	@mkdir -p ./obj
 
 install: all
 	@echo "   Installing emul.h into $(INCLUDEDIR)"
@@ -65,8 +65,9 @@ install: all
 	@echo "   emul library v$(EMULVER) installed successfully in $(LIBDIR)."
 	@cp -v sirfmon emul_test $(BINDIR)/
 	@echo "   emul programs installed successfully in $(BINDIR)."
-	@cp -v man/man3/*.3 $(MANDIR)/man3/
-	@echo "   emul man pages installed successfully in $(MANDIR)/man3/."
+	@if ! test -z "$(MANDIR)"; then \
+		cp -v man/man3/*.3 $(MANDIR)/man3/; \
+		echo "   emul man pages installed successfully in $(MANDIR)/man3/."; fi
 
 uninstall:
 	@echo -n "   Performing uninstall..."
