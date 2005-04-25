@@ -1,20 +1,19 @@
-EarthMate Userland Library v1.0.2
+EarthMate Userland Library
 emul's dependencies are as follows:
 
 libpthread
 libusb >= 0.1.8
 
-	The library has moved away from automake and friends.  For your target
-install, please link the appropriate makefile.  For example, someone doing
-an install with Mac OS X or OpenDarwin should issue the command:
-	$ln -s Makefile.darwin Makefile
+	The install process has been simplified further.  To install, you
+first need to run the configuration script as follows:
+$ ./configure --prefix=/usr
 
-	To install, please take a look at the Makefile and make sure the
-PREFIX variable is set to your liking.  The default is '/usr'.  If this
-is acceptable, it should be simple enough to enter the command below
-and hit enter:
-
-$ make install
+	This should suffice for most users.  Then run 'make install' as 
+directed by the configuration script.  If the build process fails, please
+file a bug report at http://developer.berlios.de/projects/emul with the
+full output from error message.  Note that the build process does not link
+the test programs against the static library.  The static library can still
+be built and installed.
 
 	To see if things are working, there are two programs which utilize
 this library.  Those are: emul_test and sirfmon.  If all goes well,
@@ -26,6 +25,8 @@ library via the command:
 $ sirfmon emate     (it also works with regular tty devices)
 
 	You can switch the unit between sirf and nmea with the sirfmon utility.
+By default, the unit is switched into sirf mode when starting sirfmon.  To
+go back to nmea, simply enter 'n' at the command line.
 
 	Both sirfmon and emul_test are installed by default.  emul_test can be
 passed the argument 'd1' - 'd8' to activate emul library debugging.
