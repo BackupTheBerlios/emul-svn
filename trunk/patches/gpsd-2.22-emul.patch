@@ -1,0 +1,695 @@
+--- a/Makefile.am	2005-04-12 18:53:55.000000000 -0500
++++ b/Makefile.am	2005-04-28 22:49:20.556518168 -0500
+@@ -35,14 +35,14 @@
+ #
+ sbin_PROGRAMS = gpsd
+ gpsd_SOURCES = gpsd.c
+-gpsd_LDADD = $(LIBM) libgps.la -lm
++gpsd_LDADD = -lemul $(LIBM) libgps.la -lm
+ 
+ 
+ #
+ # Build sirfmon
+ #
+ sirfmon_SOURCES = sirfmon.c
+-sirfmon_LDADD = $(LIBM) -lncurses libgps.la -lm 
++sirfmon_LDADD = -lemul $(LIBM) -lncurses libgps.la -lm
+ 
+ #
+ # Build shared library
+@@ -66,7 +66,7 @@
+ 	sirf.c \
+ 	report.c
+ 
+-libgps_la_LIBADD = $(LIBM) $(LIBC) $(LIBNSL) $(LIBSOCKET)
++libgps_la_LIBADD = -lemul $(LIBM) $(LIBC) $(LIBNSL) $(LIBSOCKET)
+ 
+ #
+ # Create Manpages
+--- a/configure.ac	2005-04-25 15:50:28.000000000 -0500
++++ b/configure.ac	2005-04-28 22:49:20.557518016 -0500
+@@ -62,6 +62,8 @@
+ AC_SUBST(LIBM)
+ AC_CHECK_LIB(c, open, LIBC="-lc")
+ AC_SUBST(LIBC)
++AC_CHECK_LIB(emul, em_close, LIBEMUL="-lemul")
++AC_SUBST(LIBEMUL)
+ 
+ AH_VERBATIM([_GNU_SOURCE],
+           [/* Macro for declaring function arguments unused. */
+--- a/drivers.c	2005-04-12 09:07:50.000000000 -0500
++++ b/drivers.c	2005-04-28 22:49:20.559517712 -0500
+@@ -5,6 +5,7 @@
+ #include <sys/time.h>
+ 
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ 
+ /**************************************************************************
+  *
+@@ -47,7 +48,7 @@
+ 
+ static int nmea_write_rtcm(struct gps_device_t *session, char *buf, int rtcmbytes)
+ {
+-    return write(session->gpsdata.gps_fd, buf, rtcmbytes);
++    return WRITE_DEV(session->gpsdata.gps_fd, buf, rtcmbytes);
+ }
+ 
+ static void nmea_initializer(struct gps_device_t *session)
+@@ -225,7 +226,7 @@
+ 
+ static void earthmate_initializer(struct gps_device_t *session)
+ {
+-    write(session->gpsdata.gps_fd, "EARTHA\r\n", 8);
++    WRITE_DEV(session->gpsdata.gps_fd, "EARTHA\r\n", 8);
+     usleep(10000);
+     session->device_type = &zodiac_binary;
+     zodiac_binary.wrapup = earthmate_close;
+--- a/garmin.c	2005-04-11 01:46:56.000000000 -0500
++++ b/garmin.c	2005-04-28 22:49:20.561517408 -0500
+@@ -54,6 +54,7 @@
+ #include "config.h"
+ #include "gpsd.h"
+ #include "gps.h"
++#include "userspace_compat.h"
+ 
+ #ifdef GARMIN_ENABLE
+ 
+@@ -595,6 +596,9 @@
+     FILE *fp;
+     int i;
+ 
++	if (session->gpsdata.gps_fd == EM_FD)
++		return 0;
++
+     // check for USB serial drivers
+     // very Linux specific
+     if ((fp = fopen( "/proc/tty/driver/usbserial", "r")) == NULL) {
+--- a/gpsd.c	2005-04-25 09:37:38.000000000 -0500
++++ b/gpsd.c	2005-04-28 22:49:20.565516800 -0500
+@@ -31,6 +31,7 @@
+ #endif
+ 
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ 
+ #define DEFAULT_DEVICE_NAME	"/dev/gps"
+ 
+@@ -307,7 +308,8 @@
+ 	if (gpsd_activate(device) < 0) {
+ 	    return NULL;
+ 	}
+-	FD_SET(device->gpsdata.gps_fd, &all_fds);
++	if (device->gpsdata.gps_fd != EM_FD)
++		FD_SET(device->gpsdata.gps_fd, &all_fds);
+     }
+ 
+     return *chp;
+@@ -353,7 +355,8 @@
+ 	if (gpsd_activate(user->device) < 0) 
+ 	    return 0;
+ 	else {
+-	    FD_SET(user->device->gpsdata.gps_fd, &all_fds);
++		 if (user->device->gpsdata.gps_fd != EM_FD)
++	       FD_SET(user->device->gpsdata.gps_fd, &all_fds);
+ 	    if (user->watcher && !user->tied) {
+ 		write(user-subscribers, "F=", 2);
+ 		write(user-subscribers, 
+@@ -411,7 +414,10 @@
+ 			 * The minimum delay time is probably constant
+ 			 * across any given type of UART.
+ 			 */
+-			tcdrain(whoami->device->gpsdata.gps_fd);
++			if (whoami->device->gpsdata.gps_fd != EM_FD)
++				tcdrain(whoami->device->gpsdata.gps_fd);
++			else
++				em_writewait();
+ 			usleep(50000);
+ 			gpsd_set_speed(whoami->device, (speed_t)i, 1);
+ 		    }
+@@ -834,6 +840,12 @@
+     if (go_background)
+ 	daemonize();
+ 
++	if ((debuglevel-8)>0)
++		em_debuglevel(debuglevel-8);
++
++	/* set emdevs */
++	num_emdevs = 0;
++
+     if (pid_file) {
+ 	FILE *fp;
+ 
+@@ -918,12 +930,24 @@
+ 	 * the file descriptors in the set goes ready. 
+ 	 */
+ 	tv.tv_sec = 1; tv.tv_usec = 0;
++	if (num_emdevs > 0) {
++		if (em_select(FD_SETSIZE, &rfds, NULL, NULL, &tv) < 0) {
++			if (errno == EINTR)
++				continue;
++			gpsd_report(0, "em_select: %s\n", strerror(errno));
++			exit(2);
++		}
++	} else if (num_emdevs < 0) {
++		gpsd_report(0, "!!! Encountered bug - Please squash me !!!\n");
++		exit(2);
++	} else {
+ 	if (select(FD_SETSIZE, &rfds, NULL, NULL, &tv) < 0) {
+ 	    if (errno == EINTR)
+ 		continue;
+ 	    gpsd_report(0, "select: %s\n", strerror(errno));
+ 	    exit(2);
+ 	}
++	}
+ 
+ 	/* always be open to new client connections */
+ 	if (FD_ISSET(msock, &rfds)) {
+@@ -984,7 +1008,8 @@
+ 	    if (nowait && device->gpsdata.gps_fd == -1) {
+ 		gpsd_deactivate(device);
+ 		if (gpsd_activate(device) >= 0) {
+-		    FD_SET(device->gpsdata.gps_fd, &all_fds);
++		    if (device->gpsdata.gps_fd != EM_FD)
++		       FD_SET(device->gpsdata.gps_fd, &all_fds);
+ 		    notify_watchers(device, "GPSD,X=%f\r\n", timestamp());
+ 		}
+ 	    }
+@@ -993,7 +1018,8 @@
+ 	    changed = 0;
+ 	    if (device->gpsdata.gps_fd >= 0 && !((changed=gpsd_poll(device)) & ONLINE_SET)) {
+ 		gpsd_report(3, "GPS is offline\n");
+-		FD_CLR(device->gpsdata.gps_fd, &all_fds);
++		if (device->gpsdata.gps_fd != EM_FD)
++		   FD_CLR(device->gpsdata.gps_fd, &all_fds);
+ 		gpsd_deactivate(device);
+ 		notify_watchers(device, "GPSD,X=0\r\n");
+ 	    }
+@@ -1048,7 +1074,8 @@
+ 			need_gps++;
+ 
+ 		if (!nowait && !need_gps && (*channel)->gpsdata.gps_fd > -1) {
+-		    FD_CLR((*channel)->gpsdata.gps_fd, &all_fds);
++		    if ((*channel)->gpsdata.gps_fd != EM_FD)
++		      FD_CLR((*channel)->gpsdata.gps_fd, &all_fds);
+ 		    gpsd_deactivate(*channel);
+ 		}
+ 	    }
+--- a/libgpsd_core.c	2005-04-13 11:11:55.000000000 -0500
++++ b/libgpsd_core.c	2005-04-28 22:49:20.566516648 -0500
+@@ -14,6 +14,7 @@
+ #endif
+ 
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ 
+ #define NO_MAG_VAR	-999	/* must be out of band for degrees */
+ 
+@@ -118,6 +119,10 @@
+ static int is_input_waiting(int fd)
+ {
+     int	count;
++
++	if (fd == EM_FD)
++		return em_read_data_avail();
++
+     if (fd < 0 || ioctl(fd, FIONREAD, &count) < 0)
+ 	return -1;
+     return count;
+--- a/nmea_parse.c	2005-04-12 18:31:23.000000000 -0500
++++ b/nmea_parse.c	2005-04-28 22:49:20.568516344 -0500
+@@ -8,6 +8,7 @@
+ #include <time.h>
+ 
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ 
+ /**************************************************************************
+  *
+@@ -555,7 +556,7 @@
+     va_end(ap);
+     strcat(buf, "*");
+     nmea_add_checksum(buf);
+-    status = write(fd, buf, strlen(buf));
++    status = WRITE_DEV(fd, buf, strlen(buf));
+     if (status == strlen(buf)) {
+ 	gpsd_report(2, "=> GPS: %s\n", buf);
+ 	return status;
+--- a/packet.c	2005-04-11 16:05:31.000000000 -0500
++++ b/packet.c	2005-04-28 22:49:20.570516040 -0500
+@@ -36,6 +36,7 @@
+ #endif
+ 
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ 
+ #ifdef TESTMAIN
+ #include <stdarg.h>
+@@ -384,7 +385,7 @@
+     if (waiting > room)
+ 	waiting = room;
+ 
+-    newdata = read(session->gpsdata.gps_fd, session->inbufptr, waiting);
++    newdata = READ_DEV(session->gpsdata.gps_fd, session->inbufptr, waiting);
+ #else
+     newdata = waiting;
+ #endif /* TESTMAIN */
+@@ -507,8 +508,12 @@
+     gpsd_report(5, "packet_sniff begins\n");
+     for (n = 0; n < SNIFF_RETRIES; n += count) {
+ 	count = 0;
++	if (session->gpsdata.gps_fd != EM_FD) {
+ 	if (ioctl(session->gpsdata.gps_fd, FIONREAD, &count) < 0)
+ 	    return BAD_PACKET;
++	} else {
++		count = em_read_data_avail();
++	}
+ 	if (count && packet_get(session, count)) {
+ 	    /* push back the last packet grabbed */
+ 	    if (session->outbuflen + session->inbuflen < MAX_PACKET_LENGTH) {
+--- a/serial.c	2005-04-04 22:19:18.000000000 -0500
++++ b/serial.c	2005-04-28 22:49:20.571515888 -0500
+@@ -8,6 +8,7 @@
+ #include <sys/modem.h>
+ #endif /* HAVE_SYS_MODEM_H */
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ /* Workaround for HP-UX 11.23, which is missing CRTSCTS */
+ #ifndef CRTSCTS
+ #  ifdef CNEW_RTSCTS
+@@ -37,6 +38,7 @@
+ 		   unsigned int speed, unsigned int stopbits)
+ {
+     unsigned int	rate;
++    struct serconfig sconfig;
+ 
+     if (speed < 300)
+ 	rate = 0;
+@@ -59,6 +61,7 @@
+     else
+       rate =  B115200;
+ 
++	if (!(session->gpsdata.gps_fd == EM_FD)) {
+     tcflush(session->gpsdata.gps_fd, TCIOFLUSH);	/* toss stale data */
+     if (speed!=cfgetispeed(&session->ttyset) || stopbits!=session->gpsdata.stopbits) {
+ 	cfsetispeed(&session->ttyset, (speed_t)rate);
+@@ -69,6 +72,19 @@
+ 	    return 0;
+ 	tcflush(session->gpsdata.gps_fd, TCIOFLUSH);
+     }
++	} else {
++		em_flush(TCIOFLUSH);
++		if (speed!=cfgetispeed(&session->ttyset) || stopbits!=session->gpsdata.stopbits) {
++			cfsetispeed(&session->ttyset, (speed_t)rate);
++			cfsetospeed(&session->ttyset, (speed_t)rate);
++			sconfig.baudrate = em_getbaudmask(rate);
++			sconfig.databits = (stopbits==2 ? 7 : 8);
++			sconfig.stopbits = stopbits;
++			sconfig.parity = PAR_NONE;
++			em_serconfig_set(&sconfig);
++			em_flush(TCIOFLUSH);
++		}
++	}
+ 
+     if ((session->packet_type = packet_sniff(session)) == BAD_PACKET)
+ 	return 0;
+@@ -86,18 +102,30 @@
+     /* every rate we're likely to see on a GPS */
+     static unsigned int rates[] = {4800, 9600, 19200, 38400, 57600};
+ 
++	if (!strcmp(session->gpsdata.gps_device, "emate")) {
++		gpsd_report(1, "opening Earthmate GPS (emul library)\n");
++		if (em_open() < 0) {
++			gpsd_report(1, "device open failed\n");
++			return -1;
++		}
++		num_emdevs++;
++		session->gpsdata.gps_fd = EM_FD;
++		em_linecontrol(CONTROL_DTR | CONTROL_RTS);
++	} else {
+     gpsd_report(1, "opening GPS data source at '%s'\n", session->gpsdata.gps_device);
+     if ((session->gpsdata.gps_fd = open(session->gpsdata.gps_device, O_RDWR|O_NOCTTY)) < 0) {
+ 	gpsd_report(1, "device open failed: %s\n", strerror(errno));
+ 	return -1;
+     }
++	}
+ 
+     session->packet_type = BAD_PACKET;
+-    if (isatty(session->gpsdata.gps_fd)) {
++    if (EM_CHECK(session->gpsdata.gps_fd) isatty(session->gpsdata.gps_fd)) {
+ #ifdef NON_NMEA_ENABLE
+ 	struct gps_type_t **dp;
+ 
+ 	for (dp = gpsd_drivers; *dp; dp++) {
++           if (session->gpsdata.gps_fd != EM_FD)
+            tcflush(session->gpsdata.gps_fd, TCIOFLUSH);  /* toss stale data */
+ 	    if ((*dp)->probe && (*dp)->probe(session)) {
+ 		gpsd_report(3, "probe found %s driver...\n", (*dp)->typename);
+@@ -108,6 +136,7 @@
+ 	gpsd_report(3, "no probe matched...\n");
+ #endif /* NON_NMEA_ENABLE */
+ 
++	if (session->gpsdata.gps_fd != EM_FD) {
+ 	/* Save original terminal parameters */
+ 	if (tcgetattr(session->gpsdata.gps_fd,&session->ttyset_old) != 0)
+ 	  return -1;
+@@ -121,6 +150,7 @@
+ 	session->ttyset.c_cflag |= CREAD | CLOCAL;
+ 	session->ttyset.c_iflag = session->ttyset.c_oflag = session->ttyset.c_lflag = (tcflag_t) 0;
+ 	session->ttyset.c_oflag = (ONLCR);
++	}
+ 
+ 	if (session->gpsdata.baudrate) {
+ 	    gpsd_report(1, "setting speed %d, %d stopbits, no parity\n", 
+@@ -147,6 +177,16 @@
+ void gpsd_close(struct gps_device_t *session)
+ {
+     if (session->gpsdata.gps_fd != -1) {
++	if ((session->gpsdata.gps_fd == EM_FD) && em_isactive()) {
++		num_emdevs--;
++		em_linecontrol(CONTROL_DROP);
++		em_close();
++		return;
++	} else if (session->gpsdata.gps_fd == EM_FD) {
++		num_emdevs--;
++		return;
++	}
++
+ 	if (isatty(session->gpsdata.gps_fd)) {
+ 	    /* force hangup on close on systems that don't do HUPCL properly */
+ 	    cfsetispeed(&session->ttyset, (speed_t)B0);
+--- a/sirf.c	2005-04-21 11:31:26.000000000 -0500
++++ b/sirf.c	2005-04-28 22:49:20.574515432 -0500
+@@ -50,6 +50,7 @@
+ #include <stdio.h>
+ 
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ #if defined(SIRFII_ENABLE) && defined(BINARY_ENABLE)
+ 
+ #define HI(n)		((n) >> 8)
+@@ -75,8 +76,11 @@
+    for (i = 0; i < len+8; i++)
+        sprintf(buf+strlen(buf), " %02x", msg[i]);
+    gpsd_report(4, "Writing SiRF control type %02x:%s\n", msg[4], buf);
+-   ok = write(fd, msg, len+8) == len+8;
+-   tcdrain(fd);
++   ok = WRITE_DEV(fd, msg, len+8) == len+8;
++   if (fd == EM_FD)
++      em_writewait();
++   else
++      tcdrain(fd);
+    return(ok);
+ }
+ 
+--- a/sirfmon.c	2005-04-20 17:30:17.000000000 -0500
++++ b/sirfmon.c	2005-04-28 22:49:20.577514976 -0500
+@@ -28,6 +28,7 @@
+ #include <time.h>
+ #include <termios.h>
+ #include <fcntl.h>	/* for O_RDWR */
++#include <emul.h>
+ #include "gpsutils.h"
+ 
+ #include "config.h"
+@@ -95,7 +96,7 @@
+ 
+ static struct termios ttyset;
+ static WINDOW *mid2win, *mid4win, *mid6win, *mid7win, *mid9win, *mid13win;
+-static WINDOW *mid19win, *mid27win, *cmdwin, *debugwin;
++static WINDOW *mid19win, *mid27win, *cmdwin, *emulwin, *debugwin;
+ 
+ #define NO_PACKET	0
+ #define SIRF_PACKET	1
+@@ -106,6 +107,8 @@
+     unsigned int	rate, count, state;
+     int st;
+     unsigned char	c;
++    struct serconfig sconfig;
++    struct timeval tv;
+ 
+     if (speed < 300)
+ 	rate = 0;
+@@ -126,6 +129,7 @@
+     else
+       rate =  B57600;
+ 
++    if (!em_isemate()) {
+     tcflush(LineFd, TCIOFLUSH);	/* toss stale data */
+     cfsetispeed(&ttyset, (speed_t)rate);
+     cfsetospeed(&ttyset, (speed_t)rate);
+@@ -134,11 +138,27 @@
+     if (tcsetattr(LineFd, TCSANOW, &ttyset) != 0)
+ 	return NO_PACKET;
+     tcflush(LineFd, TCIOFLUSH);
++    } else {
++    em_flush(TCIOFLUSH);
++    cfsetispeed(&ttyset, (speed_t)rate);
++    cfsetospeed(&ttyset, (speed_t)rate);
++    sconfig.baudrate = em_getbaudmask(rate);
++    sconfig.databits = (stopbits==2 ? 7 : 8);
++    sconfig.stopbits = stopbits;
++    sconfig.parity = PAR_NONE;
++    em_serconfig_set(&sconfig);
++    em_flush(TCIOFLUSH);
++    }
+ 
+     /* sniff for NMEA or SiRF packet */
+     state = 0;
+     for (count = 0; count < SNIFF_RETRIES; count++) {
+-	if ((st = read(LineFd, &c, 1)) < 0)
++	if (em_isemate()) {
++		tv.tv_sec = 0;
++		tv.tv_usec = 100000;
++		em_datawait(&tv, 0);
++	}
++	if ((st = READ(LineFd, &c, 1)) < 0)
+ 	    return 0;
+ 	else
+ 	    count += st;
+@@ -203,7 +223,7 @@
+     va_end(ap);
+     strcat(buf, "*");
+     nmea_add_checksum(buf);
+-    status = write(fd, buf, strlen(buf));
++    status = WRITE(fd, buf, strlen(buf));
+     if (status == strlen(buf)) {
+ 	return status;
+     } else {
+@@ -221,10 +241,12 @@
+      * 200 (and possibly other USB GPSes) gets completely hosed
+      * in the presence of flow control.  Thus, turn off CRTSCTS.
+      */
++    if (!em_isemate()) {
+     ttyset.c_cflag &= ~(PARENB | CRTSCTS);
+     ttyset.c_cflag |= CREAD | CLOCAL;
+     ttyset.c_iflag = ttyset.c_oflag = ttyset.c_lflag = (tcflag_t) 0;
+     ttyset.c_oflag = (ONLCR);
++    }
+ 
+     for (stopbits = 1; stopbits <= 2; stopbits++) {
+ 	*pstopbits = stopbits;
+@@ -296,16 +318,35 @@
+ 	exit(1);
+     }
+ 
++    if (strcmp(argv[1], "emate")==0)
++       em_devtype(EMATE);
++    else
++       em_devtype(NORMAL);
++
++	 if (!em_isemate())
+     if ((LineFd = open(argv[1],O_RDWR)) < 0) {
+ 	perror(argv[1]);
+ 	return 1;
+     }
+     
++	if (!em_isemate()) {
+     /* Save original terminal parameters */
+     if (tcgetattr(LineFd, &ttyset) != 0 || !(bps = hunt_open(&stopbits))) {
+ 	fputs("Can't sync up with device!\n", stderr);
+ 	exit(1);
+     }
++	} else {
++	if (em_open()<0) {
++    fprintf(stderr, "Failed to open earthmate device, check permissions?\n");
++    exit(1);
++	}
++    em_linecontrol(CONTROL_DTR | CONTROL_RTS);
++
++	if (!(bps = hunt_open(&stopbits))) {
++		fputs("Can't sync up with device!\n", stderr);
++		exit(1);
++	}
++	}
+ 
+     initscr();
+     cbreak();
+@@ -322,7 +363,12 @@
+     mid19win  = newwin(17, 50,  7, 30);
+     mid27win  = newwin(4,  50, 20, 30);
+     cmdwin    = newwin(2,  30, 22, 0);
+-    debugwin  = newwin(0,   0, 24, 0);
++    if (em_isemate()) {
++    emulwin   = subwin(stdscr, 3,  80, 24, 0);
++    debugwin  = subwin(stdscr, 0,   0, 27, 0);
++    } else {
++    debugwin = subwin(stdscr, 0, 0, 24, 0);
++    }
+     scrollok(debugwin,TRUE);
+     wsetscrreg(debugwin, 0, LINES-21);
+ 
+@@ -436,6 +482,15 @@
+     wattrset(cmdwin, A_NORMAL);
+     mvwprintw(cmdwin, 1, 15, "%4d N %d", bps, stopbits);
+ 
++    if (em_isemate()) {
++    wborder(emulwin, 0, 0, 0, 0, 0, 0, 0, 0),
++    wattrset(emulwin, A_BOLD);
++    mvwprintw(emulwin, 1, 2, "Read queue: ");
++    mvwprintw(emulwin, 1, 45, "Write queue: ");
++    mvwprintw(emulwin, 2, 45, " Earthmate Buffer(MAX 4096 R/W) ");
++    wattrset(emulwin, A_NORMAL);
++    }
++
+     wmove(debugwin,0, 0);
+ 
+     FD_ZERO(&select_set);
+@@ -458,14 +513,27 @@
+ 	    touchwin(mid19win);
+ 	    wrefresh(mid19win);
+ 	}
++	if (em_isemate())
++	   wrefresh(emulwin);
+ 	wrefresh(debugwin);
+ 	wrefresh(cmdwin);
+ 
++   if (em_isemate()) {
++   mvwprintw(emulwin, 1, 15, "%d bytes  ", em_read_data_avail());
++   mvwprintw(emulwin, 1, 60, "%d bytes  ", em_write_data_avail());
++   }
++
+ 	FD_SET(0,&select_set);
+-	FD_SET(LineFd,&select_set);
++	if (!em_isemate())
++		FD_SET(LineFd,&select_set);
+ 
+-	if (select(LineFd + 1,&select_set,NULL,NULL,NULL) < 0)
+-	    break;
++	if (!em_isemate()) {
++		if (select(LineFd + 1,&select_set,NULL,NULL,NULL) < 0)
++			break;
++	} else {
++		if (em_select(1, &select_set,NULL,NULL,NULL) < 0)
++			break;
++	}
+ 
+ 	if (FD_ISSET(0,&select_set)) {
+ 	    wmove(cmdwin, 0,5);
+@@ -485,6 +553,8 @@
+ 		wrefresh(mid19win);
+ 	    }
+ 	    wrefresh(mid19win);
++	    if (em_isemate())
++	       wrefresh(emulwin);
+ 	    wrefresh(debugwin);
+ 	    wrefresh(cmdwin);
+ 
+@@ -619,6 +689,11 @@
+     if (logfile != NULL)
+ 	fclose(logfile);
+ 
++    if (em_isemate()) {
++       em_linecontrol(CONTROL_DROP);
++       em_close();
++    }
++
+     endwin();
+     exit(0);
+ }
+@@ -1022,19 +1097,25 @@
+ 	struct timeval timeval;
+ 
+ 	FD_ZERO(&select_set);
+-	FD_SET(LineFd,&select_set);
++	if (!em_isemate())
++		FD_SET(LineFd,&select_set);
+ 	timeval.tv_sec = 0;
+ 	timeval.tv_usec = 500000;
+ 
++	if (!em_isemate()) {
+ 	if (select(LineFd + 1,&select_set,NULL,NULL,&timeval) < 0)
+ 	    return EOF;
+ 
+ 	if (!FD_ISSET(LineFd,&select_set))
+ 	    return EOF;
++	} else {
++		if (em_datawait(&timeval, 0)<1)
++			return EOF;
++	}
+ 
+ 	usleep(100000);
+ 
+-	if ((cnt = read(LineFd,inbuf,BUFLEN)) <= 0)
++	if ((cnt = READ(LineFd,inbuf,BUFLEN)) <= 0)
+ 	    return EOF;
+ 
+ 	pos = 0;
+@@ -1110,5 +1191,5 @@
+ 	wprintw(debugwin, " %02x",buf[i]);
+     wprintw(debugwin, "\n");
+ 
+-    return (write(LineFd,buf,len) == len);
++    return (WRITE(LineFd,buf,len) == len);
+ }
+--- /dev/null	2005-04-26 18:14:56.104748728 -0500
++++ b/userspace_compat.h	2005-04-28 22:49:20.579514672 -0500
+@@ -0,0 +1,29 @@
++/* Userspace gps devices
++ * Macros for gpsd / emul integration.
++ */
++
++#ifndef US_COMPAT_H
++#define US_COMPAT_H
++#include <emul.h> /* earthmate userland library */
++
++/* Track how many userspace earthmate devices there currently are.
++ *
++ *  The library does not support more than one earthmate device at the moment,
++ *  but in future releases it very well could.
++ */
++int num_emdevs;
++
++/* maximum 32-bit value for a signed int (minus 30)
++ * very unlikely anyone has this as set limit for max fds
++ */
++#define EM_FD 2147483617
++
++#define WRITE_DEV(fd, buf, cnt) \
++	(fd == EM_FD) ? em_write(buf, cnt) : write(fd, buf, cnt)
++
++#define READ_DEV(fd, buf, cnt) \
++	(fd == EM_FD) ? em_read(buf, cnt) : read(fd, buf, cnt)
++
++#define EM_CHECK(fd) (fd == EM_FD) ? 1 : 
++
++#endif /* US_COMPAT_H */
+--- a/zodiac.c	2005-03-30 17:26:28.000000000 -0600
++++ b/zodiac.c	2005-04-28 22:49:20.578514824 -0500
+@@ -8,6 +8,7 @@
+ #define __USE_ISOC99	1	/* needed to get log2() from math.h */
+ #include <math.h>
+ #include "gpsd.h"
++#include "userspace_compat.h"
+ 
+ #ifdef ZODIAC_ENABLE
+ 
+@@ -45,7 +46,7 @@
+ 	*p++ = *(data+1); *p++ = *data;
+ 	data += 2; len -= 2;
+     }
+-    return write(fd, buf, len);
++    return WRITE_DEV(fd, buf, len);
+ }
+ #else
+ #define end_write write
