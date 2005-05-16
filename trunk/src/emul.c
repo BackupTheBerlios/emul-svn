@@ -20,15 +20,26 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <usb.h>
 #include <errno.h>
 #include <pthread.h>
 #include <termios.h>
-#include <sys/time.h>
+#if TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+#include <usb.h>
 
 #include "emul.h"
 #include "buf.h"
@@ -45,6 +56,14 @@
 #define CONTROL 3
 #define IDLE    4
 #define QUIT    5
+
+#ifndef WORDS_BIGENDIAN
+# define cpu_to_le32(x) (x)
+#else
+  u_int32_t cpu_to_le32(u_int32_t x) { return (((x&0x000000FF)<<24)+((x&0x0000FF00)<<8) +
+		((x&0x00FF0000)>>8)+((x&0xFF000000)>>24)); }
+#endif
+#define le32_to_cpu(x) cpu_to_le32(x)
 
 
 /* device handle, etc */
@@ -67,6 +86,8 @@ static void *rw_thread(void *arg);
 static int em_debug = 0;
 
 /* Device type - either NORMAL or EMATE.
+ *
+ * Should be considered deprecated.
  */
 static int DEVICE_TYPE = NORMAL;
 
@@ -102,7 +123,8 @@ int em_open() {
 		struct usb_device *dev;
 		for (dev = bus->devices; dev; dev = dev->next) {
 			if (dev->descriptor.idVendor == VENDOR_ID_DELORME &&
-				dev->descriptor.idProduct == PRODUCT_ID_EARTHMATEUSB) {
+				(dev->descriptor.idProduct == PRODUCT_ID_EARTHMATEUSB ||
+				 dev->descriptor.idProduct == PRODUCT_ID_EARTHMATELT20)) {
 				em_device.udev = usb_open(dev);
 				if (em_device.udev) {
 					if (em_debug) fprintf(stdout, "em_open - Successfuly opened device.\n");
@@ -239,7 +261,7 @@ int em_serconfig_set(struct serconfig *sconfig)
 	stopbits = sconfig->stopbits - 1;
 	
 	memset(feature_buffer, 0x0, 5);
-	*((u_int32_t *)feature_buffer) = sconfig->baudrate;
+	*((u_int32_t *)feature_buffer) = le32_to_cpu(sconfig->baudrate);
 	
 	/* set config */
 	config |= databits; /* 3 = 8 data bits, 0 = 5 stop bits */
@@ -291,7 +313,7 @@ int em_serconfig_get(struct serconfig *sconfig)
 		return ret;
 	}
 	
-	sconfig->baudrate = *((u_int32_t *)feature_buffer);
+	sconfig->baudrate = cpu_to_le32(*((u_int32_t *)feature_buffer));
 	sconfig->databits = (feature_buffer[4] & 0x3) + 5;
 	sconfig->stopbits = ((feature_buffer[4] >> 3) & 0x1) + 1;
 	sconfig->parity = feature_buffer[4] & 0x30;
@@ -319,7 +341,11 @@ int em_raw_read(u_int8_t buffer[])
 	
 	memset(tbuf, 0x0, 32);
 	
+#ifdef HAVE_USBINT
 	ret = usb_interrupt_read(em_device.udev, 0x81, (char *)tbuf, 32, 100);
+#else
+	ret = usb_bulk_read(em_device.udev, 0x81, (char *)tbuf, 32, 100);
+#endif
 	
 	if (ret < 0)
 		return ret;
@@ -385,7 +411,11 @@ int em_raw_write(u_int8_t *buffer, int size)
 		fprintf(stdout, "\n");
 	}
 	
+#ifdef HAVE_USBINT
 	ret = usb_interrupt_write(em_device.udev, 0x02, (char *)tbuf, size+2, 100);
+#else
+	ret = usb_bulk_write(em_device.udev, 0x02, (char *)tbuf, size+2, 100);
+#endif
 	
 	em_device.lines &= ~CONTROL_RESET;
 	
@@ -457,7 +487,7 @@ void *rw_thread(void *arg) {
 				break;
 			case DOWRITE:
 				pthread_mutex_lock(&write_buffer->buf_mutex);
-				count = buf_get(write_buffer, (char *)wbuffer, 30); /* woops - need to provide alloced mem for cptr */
+				count = buf_get(write_buffer, (char *)wbuffer, 30);
 				pthread_mutex_unlock(&write_buffer->buf_mutex);
 				ret = em_raw_write(wbuffer, count);
 				if (ret < 0) {
@@ -468,7 +498,15 @@ void *rw_thread(void *arg) {
 			case CONTROL:
 				buf[0] = em_device.lines;
 				buf[1] = 0;
-				usb_interrupt_write(em_device.udev, 0x02, (char *)buf, 2, 100);
+			#ifdef HAVE_USBINT
+				ret = usb_interrupt_write(em_device.udev, 0x02, (char *)buf, 2, 100);
+			#else
+				ret = usb_bulk_write(em_device.udev, 0x02, (char *)buf, 2, 100);
+			#endif
+				if (ret<0) {
+					if (em_debug) fprintf(stderr, "rw_thread: DOCONTROL error - %d\n", ret);
+					EXIT = 1;
+				}
 				em_device.thread_state = DOREAD;
 			case IDLE:
 				usleep(5000); /* 5 ms */
@@ -700,7 +738,7 @@ void em_debuglevel(int mode)
 	em_debug = mode;
 }
 
-/*** Utility functions ***/
+/*** Utility functions - deprecated ***/
 
 void em_devtype(int type)
 {

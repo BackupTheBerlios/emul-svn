@@ -24,6 +24,10 @@
 #ifndef EMUL_H
 #define EMUL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*! \file emul.h
     \brief Header file for the emul library.
 
@@ -300,10 +304,13 @@ long em_getbaudrate(void);
 /* usb devid/vendid */
 /*! \brief The USB Vendor ID used to find the Earthmate device with libusb.
  */
-#define  VENDOR_ID_DELORME         0x1163
+#define  VENDOR_ID_DELORME        0x1163
 /*! \brief The USB Product ID used to find the Earthmate device with libusb.
  */
-#define  PRODUCT_ID_EARTHMATEUSB   0x0100
+#define  PRODUCT_ID_EARTHMATEUSB  0x0100
+/*! \brief The USB Product ID of the DeLorme Earthmate lt-20.
+ */
+#define  PRODUCT_ID_EARTHMATELT20 0x0200
 
 
 /*! \brief For use with em_raw_read and em_raw_write.
@@ -328,5 +335,9 @@ int  em_raw_read(u_int8_t buffer[]);
     \note Always use the \a MAX_READ_WRITE define if you dare to use this function.
  */
 int  em_raw_write(u_int8_t *buffer, int size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ifndef EMUL_H */

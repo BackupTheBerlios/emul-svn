@@ -20,7 +20,6 @@
  *      Ctrl-S -- freeze display.
  *      Ctrl-Q -- unfreese display.
  *
- * TODO: sort out header files for portability.
  */
 #include <stdio.h>
 #include <curses.h>
@@ -795,7 +794,7 @@ void decode_sirf(unsigned char buf[], int len)
 			buf[len] = '\0';
 			j = 1;
 			for (i = 0; verbpat[i] != NULL; i++)
-				if (!strncmp(buf+1,verbpat[i],strlen(verbpat[i]))) {
+				if (!strncmp((char *)buf+1,verbpat[i],strlen(verbpat[i]))) {
 					j = 0;
 					break;
 				}

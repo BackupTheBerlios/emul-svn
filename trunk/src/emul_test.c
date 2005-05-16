@@ -6,7 +6,6 @@
  *                The program will output data from both standard in       *
  *                and the earthmate device.                                *
  *                                                                         *
- *   TODO: sort out header files for portability.                          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,7 +22,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -32,11 +33,12 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #ifdef HAVE_SYS_FILIO
-#include <sys/filio.h>
+# include <sys/filio.h>
 #endif
 #include <unistd.h>
 #include <string.h>
 #include <emul.h>
+
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
