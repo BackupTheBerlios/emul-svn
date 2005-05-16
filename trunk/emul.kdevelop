@@ -3,22 +3,82 @@
   <general>
     <author>Lonnie Mendez</author>
     <email>lmendez19@austin.rr.com</email>
-    <version>$VERSION$</version>
-    <projectmanagement>KDevCustomProject</projectmanagement>
+    <version>1.0.6</version>
+    <projectmanagement>KDevAutoProject</projectmanagement>
     <primarylanguage>C</primarylanguage>
+    <keywords>
+      <keyword>C</keyword>
+      <keyword>Code</keyword>
+    </keywords>
     <ignoreparts/>
+    <projectdirectory>.</projectdirectory>
+    <absoluteprojectpath>false</absoluteprojectpath>
+    <description/>
   </general>
-  <kdevcustomproject>
-    <run>
-      <mainprogram>emul</mainprogram>
-      <directoryradio>executable</directoryradio>
-    </run>
-  </kdevcustomproject>
-  <kdevdebugger>
+  <kdevautoproject>
     <general>
-      <dbgshell/>
+      <activetarget>src/emul_test</activetarget>
+      <useconfiguration>default</useconfiguration>
     </general>
-  </kdevdebugger>
+    <run>
+      <mainprogram>src/emul</mainprogram>
+      <terminal>true</terminal>
+      <directoryradio>executable</directoryradio>
+      <customdirectory>/</customdirectory>
+      <programargs/>
+      <autocompile>true</autocompile>
+      <envvars/>
+      <runarguments>
+        <emul_test/>
+        <sirfmon/>
+      </runarguments>
+    </run>
+    <configurations>
+      <optimized>
+        <builddir>optimized</builddir>
+        <ccompiler>kdevgccoptions</ccompiler>
+        <cxxcompiler>kdevgppoptions</cxxcompiler>
+        <f77compiler>kdevg77options</f77compiler>
+        <cflags>-O2 -g0 </cflags>
+      </optimized>
+      <debug>
+        <configargs>--enable-debug=full</configargs>
+        <builddir>debug</builddir>
+        <ccompiler>kdevgccoptions</ccompiler>
+        <cxxcompiler>kdevgppoptions</cxxcompiler>
+        <f77compiler>kdevg77options</f77compiler>
+        <cflags>-O0 -g3 </cflags>
+      </debug>
+      <default>
+        <envvars/>
+        <configargs>--prefix=/usr</configargs>
+        <builddir/>
+        <topsourcedir/>
+        <cppflags/>
+        <ldflags/>
+        <ccompiler>kdevgccoptions</ccompiler>
+        <cxxcompiler>kdevgppoptions</cxxcompiler>
+        <f77compiler>kdevpgf77options</f77compiler>
+        <ccompilerbinary/>
+        <cxxcompilerbinary/>
+        <f77compilerbinary/>
+        <cflags/>
+        <cxxflags/>
+        <f77flags/>
+      </default>
+    </configurations>
+    <make>
+      <envvars>
+        <envvar value="1" name="WANT_AUTOCONF_2_5" />
+        <envvar value="1" name="WANT_AUTOMAKE_1_6" />
+      </envvars>
+      <abortonerror>true</abortonerror>
+      <numberofjobs>1</numberofjobs>
+      <dontact>false</dontact>
+      <makebin/>
+      <prio>0</prio>
+    </make>
+  </kdevautoproject>
   <kdevdoctreeview>
     <ignoretocs>
       <toc>ada</toc>
@@ -26,6 +86,7 @@
       <toc>bash</toc>
       <toc>bash_bugs</toc>
       <toc>clanlib</toc>
+      <toc>w3c-dom-level2-html</toc>
       <toc>fortran_bugs_gcc</toc>
       <toc>gnome1</toc>
       <toc>gnustep</toc>
@@ -50,9 +111,8 @@
       <toc>ruby_bugs</toc>
       <toc>sdl</toc>
       <toc>stl</toc>
-      <toc>sw</toc>
-      <toc>w3c-dom-level2-html</toc>
       <toc>w3c-svg</toc>
+      <toc>sw</toc>
       <toc>w3c-uaag10</toc>
       <toc>wxwidgets_bugs</toc>
     </ignoretocs>
@@ -68,14 +128,52 @@
     </ignoredoxygen>
   </kdevdoctreeview>
   <kdevfilecreate>
-    <filetypes/>
     <useglobaltypes>
       <type ext="c" />
       <type ext="h" />
     </useglobaltypes>
   </kdevfilecreate>
+  <kdevfileview>
+    <groups>
+      <group pattern="*.h" name="Header files" />
+      <group pattern="*.c" name="Source files" />
+      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonlocation>false</hidenonlocation>
+    </groups>
+    <tree>
+      <hidepatterns>*.o,*.lo,CVS</hidepatterns>
+      <hidenonprojectfiles>false</hidenonprojectfiles>
+    </tree>
+  </kdevfileview>
+  <kdevdocumentation>
+    <projectdoc>
+      <docsystem>Doxygen Documentation Collection</docsystem>
+      <docurl>emul.tag</docurl>
+    </projectdoc>
+  </kdevdocumentation>
+  <substmap>
+    <APPNAME>emul</APPNAME>
+    <APPNAMELC>emul</APPNAMELC>
+    <APPNAMESC>Emul</APPNAMESC>
+    <APPNAMEUC>EMUL</APPNAMEUC>
+    <AUTHOR>Lonnie Mendez</AUTHOR>
+    <CFLAGS/>
+    <EMAIL>lmendez19@austin.rr.com</EMAIL>
+    <LICENSE>GPL</LICENSE>
+    <LICENSEFILE>COPYING</LICENSEFILE>
+    <OPT_INCS/>
+    <OPT_LIBS/>
+    <VERSION>1.0.6</VERSION>
+    <YEAR>2005</YEAR>
+    <dest>/prog/cpp/emul</dest>
+  </substmap>
+  <cppsupportpart>
+    <filetemplates>
+      <interfacesuffix>.h</interfacesuffix>
+      <implementationsuffix>.cpp</implementationsuffix>
+    </filetemplates>
+  </cppsupportpart>
   <kdevcppsupport>
-    <references/>
     <codecompletion>
       <includeGlobalFunctions>true</includeGlobalFunctions>
       <includeTypes>true</includeTypes>
@@ -88,15 +186,32 @@
       <argumentsHintDelay>400</argumentsHintDelay>
       <headerCompletionDelay>250</headerCompletionDelay>
     </codecompletion>
+    <creategettersetter>
+      <prefixGet/>
+      <prefixSet>set</prefixSet>
+      <prefixVariable>m_,_</prefixVariable>
+      <parameterName>theValue</parameterName>
+      <inlineGet>true</inlineGet>
+      <inlineSet>true</inlineSet>
+    </creategettersetter>
+    <references/>
   </kdevcppsupport>
-  <kdevfileview>
-    <groups>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
-      <hidenonlocation>false</hidenonlocation>
-    </groups>
-    <tree>
-      <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
-    </tree>
-  </kdevfileview>
+  <kdevdebugger>
+    <general>
+      <programargs/>
+      <gdbpath/>
+      <dbgshell/>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
+      <breakonloadinglibs>true</breakonloadinglibs>
+      <separatetty>false</separatetty>
+      <floatingtoolbar>false</floatingtoolbar>
+    </general>
+    <display>
+      <staticmembers>false</staticmembers>
+      <demanglenames>true</demanglenames>
+      <outputradix>10</outputradix>
+    </display>
+  </kdevdebugger>
 </kdevelop>

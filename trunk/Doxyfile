@@ -1,11 +1,11 @@
-# Doxyfile 1.3.7
+# Doxyfile 1.4.1-KDevelop
 
 #---------------------------------------------------------------------------
 # Project related configuration options
 #---------------------------------------------------------------------------
-PROJECT_NAME           = "EarthMate Userland Library"
-PROJECT_NUMBER         = 1.0.3
-OUTPUT_DIRECTORY       = /prog/cpp/emul/trunk/
+PROJECT_NAME           = emul.kdevelop
+PROJECT_NUMBER         = 1.0.6
+OUTPUT_DIRECTORY       = 
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
 USE_WINDOWS_ENCODING   = NO
@@ -25,7 +25,7 @@ ABBREVIATE_BRIEF       = "The $name class" \
 ALWAYS_DETAILED_SEC    = NO
 INLINE_INHERITED_MEMB  = NO
 FULL_PATH_NAMES        = YES
-STRIP_FROM_PATH        = 
+STRIP_FROM_PATH        = /prog/cpp/emul.b/trunk/
 STRIP_FROM_INC_PATH    = 
 SHORT_NAMES            = NO
 JAVADOC_AUTOBRIEF      = NO
@@ -65,6 +65,8 @@ GENERATE_DEPRECATEDLIST= YES
 ENABLED_SECTIONS       = 
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
+SHOW_DIRECTORIES       = YES
+FILE_VERSION_FILTER    = 
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
 #---------------------------------------------------------------------------
@@ -72,12 +74,13 @@ QUIET                  = NO
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES
 WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
 WARN_FORMAT            = "$file:$line: $text"
 WARN_LOGFILE           = 
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = /prog/cpp/emul/trunk/
+INPUT                  = /prog/cpp/emul
 FILE_PATTERNS          = *.c \
                          *.cc \
                          *.cxx \
@@ -102,6 +105,7 @@ FILE_PATTERNS          = *.c \
                          *.inc \
                          *.m \
                          *.mm \
+                         *.dox \
                          *.C \
                          *.CC \
                          *.C++ \
@@ -123,9 +127,8 @@ FILE_PATTERNS          = *.c \
                          *.moc \
                          *.xpm \
                          *.dox
-RECURSIVE              = YES
-EXCLUDE                = /prog/cpp/emul/trunk/src/buf.h \
-                         /prog/cpp/emul/trunk/src/buf.c
+RECURSIVE              = yes
+EXCLUDE                = 
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = 
 EXAMPLE_PATH           = 
@@ -133,6 +136,7 @@ EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO
 IMAGE_PATH             = 
 INPUT_FILTER           = 
+FILTER_PATTERNS        = 
 FILTER_SOURCE_FILES    = NO
 #---------------------------------------------------------------------------
 # configuration options related to source browsing
@@ -203,7 +207,7 @@ MAN_LINKS              = NO
 #---------------------------------------------------------------------------
 # configuration options related to the XML output
 #---------------------------------------------------------------------------
-GENERATE_XML           = NO
+GENERATE_XML           = yes
 XML_OUTPUT             = xml
 XML_SCHEMA             = 
 XML_DTD                = 
@@ -235,7 +239,7 @@ SKIP_FUNCTION_MACROS   = YES
 # Configuration::additions related to external references   
 #---------------------------------------------------------------------------
 TAGFILES               = 
-GENERATE_TAGFILE       = earthmateusb_userland.tag
+GENERATE_TAGFILE       = emul.tag
 ALLEXTERNALS           = NO
 EXTERNAL_GROUPS        = YES
 PERL_PATH              = /usr/bin/perl
@@ -247,18 +251,22 @@ HIDE_UNDOC_RELATIONS   = YES
 HAVE_DOT               = NO
 CLASS_GRAPH            = YES
 COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
 UML_LOOK               = NO
 TEMPLATE_RELATIONS     = NO
 INCLUDE_GRAPH          = YES
 INCLUDED_BY_GRAPH      = YES
 CALL_GRAPH             = NO
 GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
 DOT_IMAGE_FORMAT       = png
 DOT_PATH               = 
 DOTFILE_DIRS           = 
 MAX_DOT_GRAPH_WIDTH    = 1024
 MAX_DOT_GRAPH_HEIGHT   = 1024
 MAX_DOT_GRAPH_DEPTH    = 1000
+DOT_TRANSPARENT        = NO
+DOT_MULTI_TARGETS      = NO
 GENERATE_LEGEND        = YES
 DOT_CLEANUP            = YES
 #---------------------------------------------------------------------------
