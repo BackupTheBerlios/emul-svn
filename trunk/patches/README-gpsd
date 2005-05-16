@@ -7,9 +7,11 @@ $ patch < gpsd-<version>-emul.patch
 
 The patch should apply cleanly... see below if it does not.
 
-Next you will most likely need to run the following two commands:
+Next you will most likely need to run the following commands:
 
-$ aclocal && automake
+$ aclocal && automake && autoconf
+
+(Darwin users may need to copy mkinstalldirs from /usr/share/automake-1.X/)
 
 (configure on gentoo fails without this):
 $ libtoolize --copy --force
@@ -27,7 +29,7 @@ further below.
 
 	To test the install, issue the below command in a terminal:
 
-$ gpsd -f emate -N
+$ gpsd -f emate -D2 -N
 
 The 'N' option will cause the daemon to run in the foreground and
 print output to the terminal as clients connect.  Then you can
