@@ -1,11 +1,31 @@
 --- a/Makefile.am	2005-04-12 18:53:55.000000000 -0500
-+++ b/Makefile.am	2005-04-28 22:49:20.556518168 -0500
-@@ -35,14 +35,14 @@
++++ b/Makefile.am	2005-05-16 13:15:15.853345776 -0500
+@@ -1,5 +1,7 @@
+ # Automake description for gpsd
+ 
++AUTOMAKE_OPTIONS = foreign 1.4
++
+ #
+ # Build stuff depending on Motif
+ #
+@@ -29,20 +31,27 @@
+ 	xgpsspeed.icon
+ xgpsspeed_LDADD = $(LIBM) $(LIBC) $(LIBNSL) $(LIBSOCKET) $(XAW_LIBS) $(XM_LIBS) $(X_LIBS) $(X_PRE_LIBS) libgps.la -lm
+ 
++if DARWINOS
++ELDFLAGS = -framework CoreFoundation -framework IOKit
++else
++ELDFLAGS =
++endif
+ 
+ #
+ # Build gpsd
  #
  sbin_PROGRAMS = gpsd
  gpsd_SOURCES = gpsd.c
 -gpsd_LDADD = $(LIBM) libgps.la -lm
 +gpsd_LDADD = -lemul $(LIBM) libgps.la -lm
++gpsd_LDFLAGS = $(ELDFLAGS)
  
  
  #
@@ -14,10 +34,11 @@
  sirfmon_SOURCES = sirfmon.c
 -sirfmon_LDADD = $(LIBM) -lncurses libgps.la -lm 
 +sirfmon_LDADD = -lemul $(LIBM) -lncurses libgps.la -lm
++sirfmon_LDFLAGS = $(ELDFLAGS)
  
  #
  # Build shared library
-@@ -66,7 +66,7 @@
+@@ -66,7 +75,7 @@
  	sirf.c \
  	report.c
  
@@ -27,12 +48,30 @@
  #
  # Create Manpages
 --- a/configure.ac	2005-04-25 15:50:28.000000000 -0500
-+++ b/configure.ac	2005-04-28 22:49:20.557518016 -0500
-@@ -62,6 +62,8 @@
++++ b/configure.ac	2005-05-16 13:59:07.150327832 -0500
+@@ -54,6 +54,16 @@
+            [Define if you have the external `daylight' variable.])
+ fi
+ 
++# needed for libemul check
++if test "`uname`" = "Darwin"; then
++ EMUL_LDFLAGS="-framework IOKit -framework CoreFoundation"
++ isdarwin=true
++else
++ EMUL_LDFLAGS=
++ isdarwin=false
++fi
++AM_CONDITIONAL(DARWINOS, test x$isdarwin = xtrue)
++
+ AC_CHECK_LIB(nsl, gethostbyname, LIBNSL="-lnsl")
+ AC_SUBST(LIBNSL)
+ AC_CHECK_LIB(socket, socket, LIBSOCKET="-lsocket")
+@@ -62,6 +72,9 @@
  AC_SUBST(LIBM)
  AC_CHECK_LIB(c, open, LIBC="-lc")
  AC_SUBST(LIBC)
-+AC_CHECK_LIB(emul, em_close, LIBEMUL="-lemul")
++AC_CHECK_LIB(emul, em_close, LIBEMUL="-lemul",,
++ [$EMUL_LDFLAGS -lusb -lpthread])
 +AC_SUBST(LIBEMUL)
  
  AH_VERBATIM([_GNU_SOURCE],
@@ -196,16 +235,20 @@
  		}
  	    }
 --- a/libgpsd_core.c	2005-04-13 11:11:55.000000000 -0500
-+++ b/libgpsd_core.c	2005-04-28 22:49:20.566516648 -0500
-@@ -14,6 +14,7 @@
++++ b/libgpsd_core.c	2005-05-16 13:15:41.828396968 -0500
+@@ -14,8 +14,11 @@
  #endif
  
  #include "gpsd.h"
 +#include "userspace_compat.h"
  
  #define NO_MAG_VAR	-999	/* must be out of band for degrees */
++/* track number of earthmate devices in use */
++int num_emdevs;
  
-@@ -118,6 +119,10 @@
+ int gpsd_open_dgps(char *dgpsserver)
+ {
+@@ -118,6 +121,10 @@
  static int is_input_waiting(int fd)
  {
      int	count;
@@ -642,8 +685,8 @@
 -    return (write(LineFd,buf,len) == len);
 +    return (WRITE(LineFd,buf,len) == len);
  }
---- /dev/null	2005-04-26 18:14:56.104748728 -0500
-+++ b/userspace_compat.h	2005-04-28 22:49:20.579514672 -0500
+--- /dev/null	2005-05-15 11:04:29.680813176 -0500
++++ b/userspace_compat.h	2005-05-16 13:15:53.205667360 -0500
 @@ -0,0 +1,29 @@
 +/* Userspace gps devices
 + * Macros for gpsd / emul integration.
@@ -658,7 +701,7 @@
 + *  The library does not support more than one earthmate device at the moment,
 + *  but in future releases it very well could.
 + */
-+int num_emdevs;
++extern int num_emdevs;
 +
 +/* maximum 32-bit value for a signed int (minus 30)
 + * very unlikely anyone has this as set limit for max fds
