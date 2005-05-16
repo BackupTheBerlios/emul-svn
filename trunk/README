@@ -1,19 +1,16 @@
-EarthMate Userland Library
+EarthMate Userland Library v1.0.6
 emul's dependencies are as follows:
 
-libpthread
-libusb >= 0.1.8
+POSIX thread support
+libusb >= 0.1.6
 
-	The install process has been simplified further.  To install, you
-first need to run the configuration script as follows:
-$ ./configure --prefix=/usr
+	Installation should be very easy now that emul is using autoconf
+and automake again.  To configure and install the library in one shot use:
 
-	This should suffice for most users.  Then run 'make install' as 
-directed by the configuration script.  If the build process fails, please
-file a bug report at http://developer.berlios.de/projects/emul with the
-full output from error message.  Note that the build process does not link
-the test programs against the static library.  The static library can still
-be built and installed.
+	configure --prefix=/usr && make install
+
+	For more information on the compilation and installation process,
+please see INSTALL.  To report errors, please see further below.
 
 	To see if things are working, there are two programs which utilize
 this library.  Those are: emul_test and sirfmon.  If all goes well,
@@ -23,9 +20,6 @@ mode is to physically replug it.  There is also the excellent utility
 'sirfmon' written mostly by Eric S. Raymond which can be run with this
 library via the command:
 $ sirfmon emate     (it also works with regular tty devices)
-
-	`export LD_LIBRARY_PATH=.` should be set if you want to run the test
-applications from source directory without installing.
 
 	You can switch the unit between sirf and nmea with the sirfmon utility.
 By default, the unit is switched into sirf mode when starting sirfmon.  To
@@ -43,11 +37,17 @@ man keywords are 'emul.h' and 'serconfig'.
 
 	If you want to help out, with porting/patches/bug reports/success
 stories/etc, please do.  Visit the project page at:
-http://developer.berlios.de/projects/emul/
+
+	http://developer.berlios.de/projects/emul/
+	or drop by #emul on irc.freenode.net
 
 
 
 My tests and trials:
+
+
+	NOTICE:  A lot of the information below has become deprecated as the
+		 library matured.
 
 		Machines tested with library:
 	amd athlon 1500/256MB ddr266/ehci-ohci-uhci
@@ -100,7 +100,12 @@ Mac OS X:
 	I'm guessing this library will work based on what happened with OpenDarwin. 
 
 BSD Folks:
-	BSD support is coming along slowly.
+	BSD support is coming along slowly.  I would also encourage patching the
+kernel with the below patches:
+
+	http://www.freebsd.org/cgi/query-pr.cgi?pr=kern/80383
+
+	(this should take care of uhid grabbing the interface)
 
 NetBSD 2.0 (gcc 3.3.3):
 	Compiled without trouble.  In order to avoid using userconf manually on every
