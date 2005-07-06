@@ -1,5 +1,5 @@
 
-AC_INIT(emul, 1.0.6)
+AC_INIT(emul, 1.0.8)
 AC_CONFIG_SRCDIR(src/emul.c)
 AM_INIT_AUTOMAKE
 AC_PREFIX_PROGRAM(gcc)
@@ -44,8 +44,9 @@ AC_HEADER_TIME
 AC_STRUCT_TM
 
 # Checks for library functions.
+# Removed AC_FUNC_MALLOC to avoid linker trouble with Mac OS 10.4.1
+# Thanks to Andrew Cole <aocole AT gmail.com> for pointing this out.
 AC_PROG_GCC_TRADITIONAL
-AC_FUNC_MALLOC
 AC_FUNC_MKTIME
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL

@@ -28,6 +28,7 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
 #include <termios.h>
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>
@@ -264,7 +265,7 @@ int em_serconfig_set(struct serconfig *sconfig)
 	*((u_int32_t *)feature_buffer) = le32_to_cpu(sconfig->baudrate);
 	
 	/* set config */
-	config |= databits; /* 3 = 8 data bits, 0 = 5 stop bits */
+	config |= databits; /* 3 = 8 data bits, 0 = 5 data bits */
 	config |= (stopbits << 3); /* 0 - 1 stop bit, 1 - 2 stop bits */
 	config |= sconfig->parity;
 	feature_buffer[4] = config;
@@ -434,7 +435,8 @@ void em_change_state(int state)
 	
 	switch (state) {
 		case EMT_ACTIVE:
-			em_device.thread_state = DOREAD;
+			if (em_device.thread_state == IDLE)
+				em_device.thread_state = DOREAD;
 			break;
 		case EMT_IDLING:
 			em_device.thread_state = IDLE;
@@ -447,10 +449,21 @@ void em_change_state(int state)
 /* the read/write/control handling thread
  */
 void *rw_thread(void *arg) {
-	u_int8_t buffer[MAX_READ_WRITE], wbuffer[30];
+	u_int8_t buffer[MAX_READ_WRITE], wbuffer[MAX_READ_WRITE];
 	int ret, EXIT=0, count, wbuf_count;
 	u_int8_t buf[2];
+	sigset_t eset;
+
+	/* ignore signals - we only care about EXIT
+	 */
+	sigaddset(&eset, SIGINT);
+	sigaddset(&eset, SIGPIPE);
+	sigaddset(&eset, SIGTERM);
+	sigaddset(&eset, SIGQUIT);
+	pthread_sigmask(SIG_SETMASK, &eset, NULL);
 	
+	/* set initial state
+	 */
 	em_device.thread_state = DOREAD;
 	
 	while (!EXIT) {
@@ -459,7 +472,7 @@ void *rw_thread(void *arg) {
 		wbuf_count = buf_data_avail(write_buffer);
 		pthread_mutex_unlock(&write_buffer->buf_mutex);
 		
-		/* don't change state when in below states */
+		/* don't change thread state when in below states */
 		if (em_device.thread_state == IDLE ||
 			 em_device.thread_state == QUIT ||
 			 em_device.thread_state == CONTROL);
@@ -528,7 +541,7 @@ int em_read(u_int8_t buffer[], int count)
 		return ret;
 
 	hasdata = em_read_data_avail();
-	if (!hasdata)
+	if (!hasdata || count <= 0)
 		return 0;
 	
 	tbuf = (u_int8_t *)malloc(sizeof(u_int8_t) * count);
@@ -582,6 +595,18 @@ int em_flush(int queue_selector)
 			buf_clear(write_buffer);
 			pthread_mutex_unlock(&write_buffer->buf_mutex);
 			break;
+		case TCOFLUSH:
+			pthread_mutex_lock(&write_buffer->buf_mutex);
+			buf_clear(write_buffer);
+			pthread_mutex_unlock(&write_buffer->buf_mutex);
+			break;
+		case TCIFLUSH:
+			pthread_mutex_lock(&read_buffer->buf_mutex);
+			buf_clear(read_buffer);
+			pthread_mutex_unlock(&read_buffer->buf_mutex);
+			break;
+		default:
+			return -1;
 	}
 	
 	return 0;

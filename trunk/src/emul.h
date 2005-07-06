@@ -49,23 +49,27 @@ extern "C" {
 /*! \brief For use with em_devtype function.
 
     When used in conjunction with \a em_devtype, this will set the active device to a
-    normal tty device.
+    normal tty device.  DEPRECATED: see userspace_compat.h included with gpsd/emul
  */
 #define NORMAL  0x0
 
 /*! \brief For use with em_devtype function.
 
     When used in conjunction with \a em_devtype, this will set the active device to an
-    Earthmate device.
+    Earthmate device.  DEPRECATED: see userspace_compat.h included with gpsd/emul
  */
 #define EMATE   0x1
 
 /*! \brief Sets the device type, either a normal tty or earthmate device.
 
+    DEPRECATED: see userspace_compat.h included with gpsd/emul
+
     \param type The type of device (\a NORMAL or \a EMATE).
  */
 void em_devtype(int type);
 /*! \brief Indicates whether or not device type is set to normal tty or earthmate device.
+
+    DEPRECATED: see userspace_compat.h included with gpsd/emul
 
     \return Returns 1 if device type is \a EMATE or 0 if device type is \a NORMAL.
  */
@@ -272,9 +276,17 @@ void em_debuglevel(int mode);
     to idle.
  */
 #define EMT_IDLING 0
+
+/*! \brief Function that can change thread state to either ACTIVE or IDLE
+
+    The function does not wait for the change to take place within the thread.
+ */
 void em_change_state(int state);
 
 /*! \brief Function that can be placed wherever read() is used safely.
+
+    DEPRECATED: see userspace_compat.h included with gpsd/emul
+
     \param fd File descriptor to read from.
     \param buf Buffer to read into.
     \param count Amount of data to try and read.
@@ -283,6 +295,9 @@ void em_change_state(int state);
  */
 ssize_t READ(int fd, void *buf, size_t count);
 /*! \brief Function that can be placed wherever write() is used safely.
+
+    DEPRECATED: see userspace_compat.h included with gpsd/emul
+
     \param fd File descriptor to write to.
     \param buf Buffer data to write.
     \param count Amount of data to try and write.
@@ -322,7 +337,6 @@ long em_getbaudrate(void);
  */
 #define MAX_READ_WRITE 30
 
-/* TODO: consider removing the below two functions from public api view */
 /*! \brief Function that reads directly from the Earthmate device.
     If the thread is active, this function should \a never be called as libusb
     will have you pulling your hair out.

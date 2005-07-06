@@ -1,4 +1,4 @@
-/* Functions are or are derived from Al Borchers circular write
+/* Functions are or are derived from Al Borchers' circular write
  * buffering code from the linux pl2303 usb-serial driver.
  *
  *  Licensed under the GNU GPL, Version 2.

@@ -1,4 +1,4 @@
-.TH "serconfig" 3 "2 Apr 2005" "Version 1.0.3" "EarthMate Userland Library" \" -*- nroff -*-
+.TH "serconfig" 3 "4 Jul 2005" "Version 1.0.8" "emul" \" -*- nroff -*-
 .ad l
 .nh
 .SH NAME
@@ -36,21 +36,38 @@ Structure used with em_serconfig_set and em_serconfig_get.
 
 This object is used for setting and retrieving the serial configuration. 
 .PP
+Definition at line 157 of file emul.h.
 .SH "Field Documentation"
 .PP 
 .SS "long \fBserconfig::baudrate\fP"
 .PP
-Parameter for baud rate. Valid rates are 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, and 115200. 
+Parameter for baud rate. 
+.PP
+Valid rates are 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, and 115200. 
+.PP
+Definition at line 162 of file emul.h.
 .SS "short \fBserconfig::databits\fP"
 .PP
-Parameter for data bits. Valid range is 5 - 8. 
+Parameter for data bits. 
+.PP
+Valid range is 5 - 8. 
+.PP
+Definition at line 167 of file emul.h.
 .SS "short \fBserconfig::parity\fP"
 .PP
-Parameter for parity type. Valid values are \fIPAR_NONE\fP, \fIPAR_EVEN\fP, or \fIPAR_ODD\fP. 
+Parameter for parity type. 
+.PP
+Valid values are \fIPAR_NONE\fP, \fIPAR_EVEN\fP, or \fIPAR_ODD\fP. 
+.PP
+Definition at line 177 of file emul.h.
 .SS "short \fBserconfig::stopbits\fP"
 .PP
-Parameter for stop bits. Valid values are 1 or 2. 
+Parameter for stop bits. 
+.PP
+Valid values are 1 or 2. 
+.PP
+Definition at line 172 of file emul.h.
 
 .SH "Author"
 .PP 
-Generated automatically by Doxygen for EarthMate Userland Library from the source code.
+Generated automatically by Doxygen for emul from the source code.

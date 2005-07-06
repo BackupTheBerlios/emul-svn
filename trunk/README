@@ -1,4 +1,4 @@
-EarthMate Userland Library v1.0.6
+EarthMate Userland Library v1.0.8
 emul's dependencies are as follows:
 
 POSIX thread support
@@ -87,6 +87,12 @@ Slackware 10.1 (gcc 3.3.4 / kernel 2.4.29):
 	Compiled without trouble.  The sirfmon utility works fairly well at rates
 below or at 9600bps.  Anything higher will start
 choking the emul applications, including gpsd.
+
+Ubuntu Linux 'Hoary' 5.0.4 (gcc 3.3.5 / kernel 2.6.10-i386-5):
+	Compiled without trouble.  Test application 'emul_test' kept segfaulting.
+To resolve this problem I grabbed libusb-0.1.10a source tarball from 
+ibusb.sourceforge.net and configured with: ./configure --prefix=/usr --libdir=/lib
+After installing the package, emul_test functioned normally.
 
 OpenDarwin 7.2.1 (gcc 3.3):
 	Compiled without trouble.  The only usb controller which seemed to work was
