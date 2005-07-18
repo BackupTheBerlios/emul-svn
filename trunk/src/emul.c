@@ -150,7 +150,8 @@ grab_interface:
 	{
 		char dname[32];
 		usb_get_driver_np(em_device.udev, 0, dname, 31);
-		if (strcmp(dname, "cypress") == 0 || strncmp(dname, "hid", 3) == 0) {
+		if (strcmp(dname, "cypress") == 0 || strncmp(dname, "hid", 3) == 0 ||
+			strcmp(dname, "usbhid") == 0) {
 			usb_detach_kernel_driver_np(em_device.udev, 0);
 			if (em_debug) fprintf(stdout, "em_open: dettached driver %s from device\n", dname);
 		}
