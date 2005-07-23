@@ -1,5 +1,5 @@
 
-AC_INIT(emul, 1.0.8)
+AC_INIT(emul, 1.0.9)
 AC_CONFIG_SRCDIR(src/emul.c)
 AM_INIT_AUTOMAKE
 AC_PREFIX_PROGRAM(gcc)
