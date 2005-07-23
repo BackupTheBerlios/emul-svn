@@ -19,7 +19,7 @@
 	<string>1.0.0d1</string>
 	<key>IOKitPersonalities</key>
 	<dict>
-		<key>EarthMate</key>
+		<key>EarthMate-USB</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
 			<string>com.apple.kernel.iokit</string>
@@ -38,6 +38,25 @@
 			<key>IOProbeScore</key>
 			<integer>11000</integer>
 		</dict>
+		<key>Earthmate-LT20</key>
+                <dict>
+                        <key>CFBundleIdentifier</key>
+                        <string>com.apple.kernel.iokit</string>
+                        <key>IOClass</key>
+                        <string>IOService</string>
+                        <key>IOProviderClass</key>
+                        <string>IOUSBInterface</string>
+                        <key>bConfigurationValue</key>
+                        <integer>1</integer>
+                        <key>bInterfaceNumber</key>
+                        <integer>0</integer>
+                        <key>idProduct</key>
+                        <integer>512</integer>
+                        <key>idVendor</key>
+                        <integer>4451</integer>
+                        <key>IOProbeScore</key>
+                        <integer>11000</integer>
+                </dict>
 	</dict>
 	<key>OSBundleLibraries</key>
 	<dict>
