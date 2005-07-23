@@ -1,4 +1,4 @@
-EarthMate Userland Library v1.0.8
+EarthMate Userland Library v1.0.9
 emul's dependencies are as follows:
 
 POSIX thread support
@@ -133,5 +133,7 @@ to look into for disabling ucycom/uhid without obtaining a migraine would be
 this:
 
 http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/device-hints.html
+
+   or use the uhid patch found in the files section @ berlios.de project page
 
 Good Luck!
