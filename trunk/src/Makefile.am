@@ -12,6 +12,7 @@ endif
 lib_LTLIBRARIES = libemul.la
 bin_PROGRAMS = emul_test sirfmon
 libemul_la_LIBADD = -lpthread -lusb
+libemul_la_LDFLAGS = $(ELDFLAGS)
 libemul_la_SOURCES = buf.c emul.c
 emul_test_SOURCES = emul_test.c
 sirfmon_SOURCES = sirfmon.c
