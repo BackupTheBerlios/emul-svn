@@ -23,6 +23,7 @@
  
 #ifndef EMUL_H
 #define EMUL_H
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -86,8 +86,9 @@ int main(int argc, char *argv[])
 	if (ret < 0)
 		fprintf(stderr, "Failed setting new serial config\n");
 
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
 	em_linecontrol(CONTROL_DTR | CONTROL_RTS);
-	
+#endif	
 	FD_ZERO(&selectset);
 	FD_SET(0, &selectset);
 	
