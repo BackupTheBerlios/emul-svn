@@ -22,7 +22,7 @@ else
 fi
 
 # Checks for libraries.
-AC_CHECK_LIB([curses], [endwin])
+AC_CHECK_LIB([curses], [endwin], NC_LIBS="-lcurses")
 AC_CHECK_LIB([m], [sqrt])
 AC_CHECK_LIB([pthread], [pthread_join])
 AC_CHECK_LIB([usb], [usb_close], ,[AC_MSG_ERROR(
@@ -65,6 +65,7 @@ else
 	AC_MSG_RESULT([no])
 fi
 AM_CONDITIONAL(DARWINOS, test x$isdarwin = xtrue)
+AM_CONDITIONAL(HAVE_CURSES, test "$NC_LIBS" != "")
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
