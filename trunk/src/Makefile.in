@@ -98,21 +98,23 @@ INCLUDES = $(all_includes)
 # check if extra linker flags needed
 @DARWINOS_TRUE@ELDFLAGS = -framework IOKit -framework CoreFoundation
 
+@HAVE_CURSES_TRUE@BUILDSIRFMON = sirfmon
+
 # the library search path.
 lib_LTLIBRARIES = libemul.la
-bin_PROGRAMS = emul_test sirfmon
+bin_PROGRAMS = emul_test $(BUILDSIRFMON)
 libemul_la_LIBADD = -lpthread -lusb
+libemul_la_LDFLAGS = $(ELDFLAGS) -version-info 1:9:0
 libemul_la_SOURCES = buf.c emul.c
 emul_test_SOURCES = emul_test.c
-sirfmon_SOURCES = sirfmon.c
+@HAVE_CURSES_TRUE@sirfmon_SOURCES = sirfmon.c
 noinst_HEADERS = buf.h
 include_HEADERS = emul.h
 AM_CFLAGS = -D_REENTRANT -Wall -Werror -pedantic
 emul_test_LDADD = $(top_builddir)/src/libemul.la
 emul_test_LDFLAGS = $(ELDFLAGS)
-sirfmon_LDADD = $(top_builddir)/src/libemul.la -lm -lcurses
-sirfmon_LDFLAGS = $(ELDFLAGS)
-libemul_la_LDFLAGS = -version-info 1:6:0
+@HAVE_CURSES_TRUE@sirfmon_LDADD = $(top_builddir)/src/libemul.la -lm -lcurses
+@HAVE_CURSES_TRUE@sirfmon_LDFLAGS = $(ELDFLAGS)
 subdir = src
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/config.h
@@ -122,15 +124,17 @@ LTLIBRARIES = $(lib_LTLIBRARIES)
 libemul_la_DEPENDENCIES =
 am_libemul_la_OBJECTS = buf.lo emul.lo
 libemul_la_OBJECTS = $(am_libemul_la_OBJECTS)
-bin_PROGRAMS = emul_test$(EXEEXT) sirfmon$(EXEEXT)
+@HAVE_CURSES_TRUE@bin_PROGRAMS = emul_test$(EXEEXT) sirfmon$(EXEEXT)
+@HAVE_CURSES_FALSE@bin_PROGRAMS = emul_test$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
 am_emul_test_OBJECTS = emul_test.$(OBJEXT)
 emul_test_OBJECTS = $(am_emul_test_OBJECTS)
 emul_test_DEPENDENCIES = $(top_builddir)/src/libemul.la
-am_sirfmon_OBJECTS = sirfmon.$(OBJEXT)
+@HAVE_CURSES_TRUE@am_sirfmon_OBJECTS = sirfmon.$(OBJEXT)
 sirfmon_OBJECTS = $(am_sirfmon_OBJECTS)
-sirfmon_DEPENDENCIES = $(top_builddir)/src/libemul.la
+@HAVE_CURSES_TRUE@sirfmon_DEPENDENCIES = $(top_builddir)/src/libemul.la
+@HAVE_CURSES_FALSE@sirfmon_DEPENDENCIES =
 
 DEFS = @DEFS@
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)
